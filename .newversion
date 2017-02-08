@@ -21,11 +21,11 @@ cat modules/KIWIGlobals.pm | sed \
 > modules/KIWIGlobals.pm.new && mv modules/KIWIGlobals.pm.new modules/KIWIGlobals.pm && chmod 644 modules/KIWIGlobals.pm
 
 # spec file version update
-cat rpm/kiwi.spec | sed \
+cat rpm/product-builder.spec | sed \
     -e "0,/Version:       .*/{s/Version:       .*/Version:        $version/}" \
     -e s"/kiwi-schema = .*/kiwi-schema = $schema/" \
     -e s"@kiwi (Version .*@kiwi (Version $version)@" \
-> rpm/kiwi.spec.new && mv rpm/kiwi.spec.new rpm/kiwi.spec
+> rpm/product-builder.spec.new && mv rpm/product-builder.spec.new rpm/product-builder.spec
 
 echo "update to version: ${version}... done"
 echo "update to schema: ${schema}... done"

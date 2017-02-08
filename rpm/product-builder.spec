@@ -22,7 +22,7 @@ Url:            http://github.com/openSUSE/product-builder
 Name:           kiwi
 License:        GPL-2.0
 Group:          System/Management
-Version:        7.04.27
+Version:        1.01.01
 Provides:       kiwi-schema = 6.2
 Release:        0
 # requirements to run kiwi
