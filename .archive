@@ -1,0 +1,27 @@
+#!/bin/sh
+# Copyright (c) 1996 SuSE GmbH Nuernberg, Germany.  All rights reserved.
+#
+# Author: Marcus Schaefer <sax@suse.de>, 2000
+# archiving script to create build required files
+#
+# CVS ID:
+# --------
+# Status: Up-to-date
+#
+#===========================================
+# make tarball from the current source tree
+#-------------------------------------------
+./.version > .revision
+git log | ./.changelog | ./.filter > ../product-builder.changes
+touch -c -r kiwi.pl .revision
+
+find -name "*.swp" | xargs rm -f
+
+cd ..
+touch -c -r kiwi/kiwi.pl kiwi
+tar -cjf product-builder.tar.bz2 \
+    --exclude=rpm \
+    --exclude=.git \
+    product-builder/
+
+mv product-builder.tar.bz2 product-builder/

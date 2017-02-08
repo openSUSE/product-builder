@@ -1,0 +1,126 @@
+#!/usr/bin/perl
+# Copyright (c) 2000 SuSE GmbH Nuernberg, Germany.  All rights reserved.
+#
+# Author: Marcus Schaefer <ms@suse.de>, 2017
+# Build script for product-builder RPM package(s)
+#
+# Syntax:
+# -------
+#   doit -p | --prepare --local
+#
+# ---
+#
+use strict;
+use Time::localtime;
+use Time::Local;
+use Getopt::Long;
+use File::lchown qw( lutimes );
+use POSIX qw( ENOENT );
+use Env;
+
+#=====================================
+# Globals...
+#-------------------------------------
+my $Prepare;
+my $LocalSource;
+
+my $pacname = "product-builder";
+
+#----[ main ]-----------------#
+sub main {
+#-----------------------------------------------
+# main routine to prepare for all the
+# package and version stuff
+#
+    my $result = GetOptions(
+        "prepare|p"       => \$Prepare,
+        "local|L"         => \$LocalSource,
+        "help|h"          => \&usage,
+        "<>"              => \&usage
+    );
+    if ( $result != 1 ) {
+        usage();
+    }
+    #==============================================
+    # Check user privileges...
+    #----------------------------------------------
+    if (! defined $Prepare) {
+        usage();
+    }
+    #==============================================
+    # Checkout source
+    #----------------------------------------------
+    my $pacdir = checkout ( $LocalSource );
+    #==============================================
+    # convert spec to utf8
+    #----------------------------------------------
+    qx (iconv -f ISO-8859-1 -t utf8 $pacdir/$pacname.spec > $pacdir/$pacname.spec.new);
+    qx (mv $pacdir/$pacname.spec.new $pacdir/$pacname.spec);
+    qx (iconv -f ISO-8859-1 -t utf8 $pacdir/$pacname.changes > $pacdir/$pacname.c.new);
+    qx (mv $pacdir/$pacname.c.new $pacdir/$pacname.changes);
+    #==============================================
+    # Cleanup
+    #----------------------------------------------
+    my $host = qx (hostname);
+    chomp ($host);
+    print 'Retrieve archive with: ';
+    print '[ scp -r root@'.$host.':'.$pacdir." . ]\n";
+}
+
+#---[ checkout ]-----#
+sub checkout {
+#-------------------------------------------------
+# checkout sources and create a package directory
+# ready to go to /work/src/done
+#
+    my $pacdir = repoup (@_);
+    chdir $pacdir;
+    qx( cp -a -p $pacname/rpm/* . );
+    chdir "./$pacname";
+    qx (./.archive);
+    chdir $pacdir;
+    qx( mv $pacname/*.bz2 . );
+    qx( rm -rf $pacname );
+    return $pacdir;
+}
+
+#----[ repoup ]----------------#
+sub repoup {
+#-----------------------------------------------
+# checkout product builder source according to an optional
+# tag and return the pathname of the temp directory
+# where the new sources are located
+#
+    #===========================================
+    # create tmp directory and change into it
+    #-------------------------------------------
+    my $parent = qx ( pwd );
+    my $tmpdir = qx (
+        mktemp -q -d /tmp/git$pacname.XXXXXX
+    );
+    chomp $parent;
+    chomp $tmpdir;
+    chdir $tmpdir
+        || die "Could not create temp dir: $!";
+    #===========================================
+    # pack up local source
+    #-------------------------------------------
+    print "Checkout source level [local]...\n";
+    qx( cp -a -p $parent/ $tmpdir/$pacname );
+    qx ($parent/.lutime $parent $tmpdir);
+    chdir $tmpdir
+        || die "Could not create temp dir: $!";
+    return $tmpdir;
+}
+
+#----[ usage ]------------#
+sub usage {
+#----------------------------------------
+# give me a usage message
+# 
+    print "usage: doit -p --local\n";
+    print "--\n";
+    exit (0);
+}
+
+main();
