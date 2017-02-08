@@ -563,44 +563,20 @@ sub Init {
             $this->logMsg('W', $msg);
         }
     }
-    my $descrdir = $this->{m_proddata}->getInfo("DESCRDIR");
     my $create_repomd;
     if ( defined($this->{m_proddata}->getVar("CREATE_REPOMD"))
         && $this->{m_proddata}->getVar("CREATE_REPOMD") eq "true") {
         $create_repomd = 1;
     }
 
-    if(not defined($descrdir) or $descrdir =~ m{notset}i) {
-        if ($create_repomd) {
-            $this->logMsg('W',
-                "Variable DESCRDIR not set but CREATE_REPOMD is true!"
-            );
-        } else {
-            $this->logMsg('E', "Variable DESCRDIR missing!");
-            return;
-        }
-    }
-    my $datadir = $this->{m_proddata}->getInfo("DATADIR");
-    if(not defined($datadir) or $datadir =~ m{notset}i) {
-        $this->logMsg('E', "Variable DATADIR missing!");
-        return;
-    }
-
-    $descrdir =~ s{^/(.*)/$}{$1};
-    my @descrdirs = split('/', $descrdir);
     foreach my $n(@media) {
         my $dirbase = "$this->{m_united}/$mediumname";
         $dirbase .= "$n" if not defined($dirext);
         $this->{m_dirlist}->{"$dirbase"} = 1;
-        $this->{m_dirlist}->{"$dirbase/$datadir"} = 1;
         if ($create_repomd) {
-            $this->{m_dirlist}->{"$dirbase/$datadir/repodata"} = 1
+            $this->{m_dirlist}->{"$dirbase/repodata"} = 1
         }
         my $curdir = "$dirbase/";
-        foreach my $part(@descrdirs) {
-            $curdir .= "$part/";
-            $this->{m_dirlist}->{"$curdir"} = 1;
-        }
         my $num = $n;
         if ( $this->{m_proddata}->getVar("FLAVOR", '') eq "ftp"
             or $this->{m_proddata}->getVar("FLAVOR", '') eq "POOL"
@@ -977,11 +953,6 @@ sub setupPackageFiles {
     my $mode = shift;
     my $usedPackages = shift;
     my $retval = 0;
-    my $base_on_cd = $this->{m_proddata}->getInfo("DATADIR");
-    if(! defined($base_on_cd)) {
-        $this->logMsg('E', "setupPackageFile: variable DATADIR must be set!");
-        return $retval;
-    }
     if(!%{$usedPackages}) {
         # empty repopackages -> probably a mini-iso (metadata only)
         # nothing to do
@@ -1120,7 +1091,7 @@ sub setupPackageFiles {
                     .".$packPointer->{'arch'}.rpm";
                 $packOptions->{$requestedArch}->{'newpath'} =
                     "$this->{m_basesubdir}->{$medium}"
-                    ."/$base_on_cd/$packPointer->{'arch'}";
+                    ."/$packPointer->{'arch'}";
                 # check for target directory:
                 if (! $this->{m_dirlist}->
                     {"$packOptions->{$requestedArch}->{'newpath'}"}
@@ -2119,7 +2090,7 @@ sub collectProducts {
             }
             if ( $found_product ) {
                 my $msg = 'ERROR: No handling of multiple products on one '
-                    . 'media supported yet (spec for content file missing)!';
+                    . 'media supported yet!';
                 die $msg;
             }
             $found_product = 1;
@@ -2363,23 +2334,11 @@ sub createMetadata {
         }
         @data = (); # clear list
     }
-    my $datadir = $this->{m_proddata}->getInfo("DATADIR");
-    my $descrdir = $this->{m_proddata}->getInfo("DESCRDIR");
     my $create_repomd;
     if ( defined($this->{m_proddata}->getVar("CREATE_REPOMD"))
         && $this->{m_proddata}->getVar("CREATE_REPOMD") eq "true"
     ) {
         $create_repomd = 1;
-    }
-    if(! defined($datadir)) {
-        $this->logMsg('E', "variables DATADIR is missing");
-        die "MISSING VARIABLES!";
-    }
-    if((! defined($descrdir)) && !$create_repomd) {
-        $this->logMsg(
-            'E', "variables DESCRDIR is missing and CREATE_REPOMD is not set"
-        );
-        die "MISSING VARIABLES!";
     }
     
     # step 7: SHA1SUMS
@@ -2410,7 +2369,8 @@ sub createMetadata {
     }
 
     # skip the rest if we are not creating susetags
-    return unless $descrdir;
+    # FIXME: anything what we still need?
+    return;
 
     ## step 8: DIRECTORY.YAST FILES
     $this->logMsg('I', "Calling create_directory.yast:");
@@ -2435,22 +2395,7 @@ sub createMetadata {
         push @dlist, "$dbase/media.1";
         push @dlist, "$dbase/media.1/license";
         push @dlist, "$dbase/images";
-        push @dlist, "$dbase/$datadir/setup/slide";
-        if(defined $descrdir) {
-            push @dlist, "$dbase/$descrdir";
-        }
-        for my $item (@dlist) {
-            if(-d $item) {
-                my @data = qx($dy $item);
-                $this->logMsg(
-                    'I',"[createMetadata] $dy output for directory $item:"
-                );
-                for my $entry (@data) {
-                    chomp $entry;
-                    $this->logMsg('I', "\t$entry");
-                }
-            }
-        }
+        push @dlist, "$dbase/setup/slide";
     }
     return;
 }
@@ -2651,7 +2596,6 @@ sub createBootPackageLinks {
         return;
     }
     my $base = $this->{m_basesubdir}->{'1'};
-    my $datadir = $this->{m_proddata}->getInfo('DATADIR');
     my $retval = 0;
     if(! -d "$base/boot") {
         my $msg;
