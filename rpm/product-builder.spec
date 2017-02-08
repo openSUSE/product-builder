@@ -17,15 +17,16 @@
 #       https://github.com/openSUSE/product-builder/issues
 #
 #
-Summary:        KIWI - SUSE Product Builder
+Summary:        SUSE Product Builder
 Url:            http://github.com/openSUSE/product-builder
-Name:           kiwi
+Name:           product-builder
 License:        GPL-2.0
 Group:          System/Management
 Version:        1.01.01
 Provides:       kiwi-schema = 6.2
 Release:        0
-# requirements to run kiwi
+Source:         %name-%version.tar.xz
+
 Requires:       perl >= %{perl_version}
 Requires:       libxslt
 Requires:       perl-Class-Singleton
@@ -37,47 +38,39 @@ Requires:       perl-XML-LibXML
 Requires:       perl-XML-LibXML-Common
 Requires:       perl-XML-SAX
 Requires:       perl-libwww-perl
-# sources
-Source:         product-builder.tar.bz2
-# build root path
-BuildRoot:      %{_tmppath}/product-builder-%{version}-build
+
+Provides:       kiwi-packagemanager:instsource
+Requires:       build
+Requires:       inst-source-utils
+Requires:       product-builder-plugin
+Requires:       genisoimage
+%ifarch %ix86 x86_64
+Requires:       syslinux
+%endif
 
 %description
 The SUSE product builder, builds product media (CD/DVD) for
-the SUSE product portfolio
+the SUSE product portfolio. Based on kiwi perl implementation.
 
-Authors:
---------
-        Adrian Schröter <adrian@suse.de>
+To be used only for product medias after openSUSE 13.2, Leap 42 
+and SLE 12.
 
 %prep
-%setup -q -n product-builder
+%setup -q
 
 %build
 test -e /.buildenv && . /.buildenv
 make buildroot=$RPM_BUILD_ROOT CFLAGS="$RPM_OPT_FLAGS"
 
 %install
-cd $RPM_BUILD_DIR/kiwi
 make buildroot=$RPM_BUILD_ROOT \
     doc_prefix=$RPM_BUILD_ROOT/%{_defaultdocdir} \
     man_prefix=$RPM_BUILD_ROOT/%{_mandir} \
     install
 
-%post -n kiwi
-# make sure kiwi can create this file from scratch with the
-# permissions it needs and is not in trouble if it exists
-# already with permissions which doesn't allow kiwi to create
-# or use this file if kiwi is called as non root user
-rm -f /dev/shm/lwp-download
-
-%clean
-rm -rf $RPM_BUILD_ROOT
-
 %files
 %defattr(-, root, root)
 %dir %{_datadir}/kiwi
-%{_datadir}/kiwi/.revision
 %{_datadir}/kiwi/modules
 %{_datadir}/kiwi/xsl
 %{_sbindir}/kiwi

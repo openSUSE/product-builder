@@ -4,7 +4,6 @@
 #
 # Makefile for SUSE - Product Builder
 # ---
-buildroot = /
 
 XML_CATALOG_FILES = .catalog.xml
 
@@ -14,6 +13,7 @@ export
 # Prefixs...
 #--------------------------------------------
 kiwi_prefix = ${buildroot}/usr/share/kiwi
+KIWIBINVZ   = ${buildroot}/usr/sbin
 
 #============================================
 # Variables... 
@@ -22,29 +22,13 @@ KIWIMODVZ   = ${kiwi_prefix}/modules
 KIWIXSLVZ   = ${kiwi_prefix}/xsl
 
 all: modules/KIWISchema.rng
-	@echo Compiling...
-	#============================================
-	# build tools
-	#--------------------------------------------
-	${MAKE} -C tools all
-	${MAKE} -C locale all
-
-	#============================================
-	# install .revision file
-	#--------------------------------------------
-	test -f ./.revision || ./.version > .revision
 
 install: uninstall
 	@echo Installing...
 	#============================================
 	# Install base directories
 	#--------------------------------------------
-	install -d -m 755 ${KIWIMODVZ} ${KIWIXSLVZ}
-
-	#============================================
-	# install .revision file
-	#--------------------------------------------
-	install -m 644 ./.revision ${kiwi_prefix}
+	install -d -m 755 ${KIWIMODVZ} ${KIWIXSLVZ} ${KIWIBINVZ}
 
 	#============================================
 	# Install KIWI base and modules
