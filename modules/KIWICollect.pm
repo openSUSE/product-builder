@@ -563,19 +563,12 @@ sub Init {
             $this->logMsg('W', $msg);
         }
     }
-    my $create_repomd;
-    if ( defined($this->{m_proddata}->getVar("CREATE_REPOMD"))
-        && $this->{m_proddata}->getVar("CREATE_REPOMD") eq "true") {
-        $create_repomd = 1;
-    }
 
     foreach my $n(@media) {
         my $dirbase = "$this->{m_united}/$mediumname";
         $dirbase .= "$n" if not defined($dirext);
         $this->{m_dirlist}->{"$dirbase"} = 1;
-        if ($create_repomd) {
-            $this->{m_dirlist}->{"$dirbase/repodata"} = 1
-        }
+        $this->{m_dirlist}->{"$dirbase/repodata"} = 1
         my $curdir = "$dirbase/";
         my $num = $n;
         if ( $this->{m_proddata}->getVar("FLAVOR", '') eq "ftp"
@@ -2156,6 +2149,9 @@ sub createMetadata {
 
     # Handle plugins
 
+if (0) {
+# DISABLE FOR NOW OR DROP
+
     # moved to beginnig after diffing with autobuild:
     # step 1: ChangeLog file
     my $make_listings = $this->{m_proddata}->getVar("MAKE_LISTINGS");
@@ -2185,6 +2181,7 @@ sub createMetadata {
         }
         @data = ();
     }
+}
 
     # step 2: media file
     $this->logMsg('I', "Creating media file in all media:");
@@ -2236,6 +2233,10 @@ sub createMetadata {
             "[createMetadata] required variable \"VENDOR\" not set"
         );
     }
+
+# skip the rest if we are not creating susetags
+# FIXME: anything what we still need?
+return;
 
     # step 3: create info.txt for Beta releases.
     $this->logMsg('I', "Handling Beta information on media:");
@@ -2334,12 +2335,6 @@ sub createMetadata {
         }
         @data = (); # clear list
     }
-    my $create_repomd;
-    if ( defined($this->{m_proddata}->getVar("CREATE_REPOMD"))
-        && $this->{m_proddata}->getVar("CREATE_REPOMD") eq "true"
-    ) {
-        $create_repomd = 1;
-    }
     
     # step 7: SHA1SUMS
     $this->logMsg('I', "Calling create_sha1sums:");
@@ -2367,10 +2362,6 @@ sub createMetadata {
             $this->logMsg('I', "\t$item");
         }
     }
-
-    # skip the rest if we are not creating susetags
-    # FIXME: anything what we still need?
-    return;
 
     ## step 8: DIRECTORY.YAST FILES
     $this->logMsg('I', "Calling create_directory.yast:");
