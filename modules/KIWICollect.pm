@@ -568,7 +568,7 @@ sub Init {
         my $dirbase = "$this->{m_united}/$mediumname";
         $dirbase .= "$n" if not defined($dirext);
         $this->{m_dirlist}->{"$dirbase"} = 1;
-        $this->{m_dirlist}->{"$dirbase/repodata"} = 1
+        $this->{m_dirlist}->{"$dirbase/repodata"} = 1;
         my $curdir = "$dirbase/";
         my $num = $n;
         if ( $this->{m_proddata}->getVar("FLAVOR", '') eq "ftp"
@@ -2149,12 +2149,12 @@ sub createMetadata {
 
     # Handle plugins
 
-if (0) {
-# DISABLE FOR NOW OR DROP
-
     # moved to beginnig after diffing with autobuild:
     # step 1: ChangeLog file
     my $make_listings = $this->{m_proddata}->getVar("MAKE_LISTINGS");
+
+if (0) {
+# DISABLE FOR NOW OR DROP
     unless (defined($make_listings) && $make_listings eq "false") {
         $this->logMsg('I', "Running mk_changelog for base directory");
         my $mk_cl = "/usr/bin/mk_changelog";
