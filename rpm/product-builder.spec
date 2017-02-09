@@ -25,7 +25,7 @@ Group:          System/Management
 Version:        1.01.01
 Provides:       kiwi-schema = 6.2
 Release:        0
-Source:         %name-%version.tar.xz
+Source:         product-builder-%version.tar.xz
 
 Requires:       perl >= %{perl_version}
 Requires:       libxslt
@@ -44,6 +44,7 @@ Requires:       build
 Requires:       inst-source-utils
 Requires:       product-builder-plugin
 Requires:       genisoimage
+Requires:       checkmedia
 %ifarch %ix86 x86_64
 Requires:       syslinux
 %endif
@@ -67,10 +68,12 @@ make buildroot=$RPM_BUILD_ROOT \
     doc_prefix=$RPM_BUILD_ROOT/%{_defaultdocdir} \
     man_prefix=$RPM_BUILD_ROOT/%{_mandir} \
     install
+./.version > $RPM_BUILD_ROOT%{_datadir}/kiwi/.revision
 
 %files
 %defattr(-, root, root)
 %dir %{_datadir}/kiwi
+%{_datadir}/kiwi/.revision
 %{_datadir}/kiwi/modules
 %{_datadir}/kiwi/xsl
 %{_sbindir}/kiwi
