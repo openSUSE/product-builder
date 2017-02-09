@@ -114,6 +114,8 @@ sub init {
     my $LogFile;               # optional file name for logging
     my $RootTree;              # optional root tree destination
     my $ForceNewRoot;          # force creation of new root directory
+    my $Prepare;               # control XML file for building chroot extend
+    my $Destination;           # destination directory for logical extends
     
     #==========================================
     # create logger and cmdline object
@@ -133,7 +135,8 @@ sub init {
         "version"               => \$Version,
         "logfile=s"             => \$LogFile,
         "root|r=s"              => \$RootTree,
-        "force-new-root"        => \$ForceNewRoot
+        "force-new-root"        => \$ForceNewRoot,
+        "prepare|p=s"           => \$Prepare,
     );
     #==========================================
     # Check result of options parsing
@@ -156,6 +159,19 @@ sub init {
     #----------------------------------------
     if (defined $RootTree) {
         $cmdL -> setRootTargetDir($RootTree)
+    }
+    #========================================
+    # turn destdir into absolute path
+    #----------------------------------------
+    if (defined $Destination) {
+        $Destination = File::Spec->rel2abs ($Destination);
+        $cmdL -> setImageTargetDir ($Destination);
+    }
+    if (defined $Prepare) {
+        if (($Prepare !~ /^\//) && (! -d $Prepare)) {
+            $Prepare = $gdata->{System}."/".$Prepare;
+        }
+        $Prepare =~ s/\/$//;
     }
     #========================================
     # non root task: create inst source
