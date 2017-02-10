@@ -2234,6 +2234,9 @@ if (0) {
         );
     }
 
+    # step X: create package links for installer
+    $this->createBootPackageLinks();
+
 # skip the rest if we are not creating susetags
 # FIXME: anything what we still need?
 return;
@@ -2313,7 +2316,6 @@ return;
         $msg.= 'are missing: PRODUCT_DIR|PRODUCT_NAME|PRODUCT_VERSION|LABEL';
         $this->logMsg('E', $msg);
     }
-    $this->createBootPackageLinks();
 
     # step 6: LISTINGS
     unless (defined($make_listings) && $make_listings eq "false") {
