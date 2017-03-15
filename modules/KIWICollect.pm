@@ -2138,10 +2138,6 @@ sub createMetadata {
             }
         }
     }
-    # that should be all, bit by bit and in order ;)
-    $this->createDirectoryStructure();
-    #$this->logMsg('I', "Enabling all plugins...");
-    #$this->{m_metacreator}->enableAllPlugins();
 
     $this->logMsg('I', "Executing all plugins...");
     $this->{m_metacreator}->createMetadata();
