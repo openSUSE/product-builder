@@ -209,7 +209,7 @@ sub usage {
     print "Copyright (c) 2017 - SUSE LINUX Products GmbH\n";
     print "\n";
     print "Usage:\n";
-    print "    kiwi --create-instsource <image-path>\n";
+    print "    product-builder --create-instsource <image-path>\n";
     print "       [ --root <image-root> ]\n";
     print "\n";
     print "Global Options:\n";

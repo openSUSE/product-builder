@@ -33,8 +33,8 @@ install: uninstall
 	#============================================
 	# Install KIWI base and modules
 	#--------------------------------------------
-	install -m 755 ./kiwi.pl       ${KIWIBINVZ}/kiwi
-	install -m 644 ./xsl/*         ${KIWIXSLVZ}
+	install -m 755 ./product-builder.pl ${KIWIBINVZ}/product-builder
+	install -m 644 ./xsl/*              ${KIWIXSLVZ}
 	for i in $(shell find modules -type f | grep -v -E '\.test');do \
 		install -m 644 $$i ${KIWIMODVZ} ;\
 	done
