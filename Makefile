@@ -13,7 +13,7 @@ export
 # Prefixs...
 #--------------------------------------------
 kiwi_prefix = ${buildroot}/usr/share/kiwi
-KIWIBINVZ   = ${buildroot}/usr/sbin
+KIWIBINVZ   = ${buildroot}/usr/bin
 
 #============================================
 # Variables... 
