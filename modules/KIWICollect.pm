@@ -1485,15 +1485,23 @@ sub unpackMetapackages {
                     $this->{m_util}->unpac_package(
                         $packPointer->{localfile}, $tmp
                     );
-                    # all metapackages contain at least a CD1 dir and _may_
-                    # contain another /usr/share/<name> dir
-                    if ( -d "$tmp/CD1") {
-                        qx(cp -a $tmp/CD1/* $this->{m_basesubdir}->{$medium});
-                    } else {
-                        my $msg;
-                        $msg = "No CD1 directory on $packPointer->{localfile}";
-                        $this->logMsg('W', $msg);
+                    # copy content of CD1 ... CD<i> subdirs if exists:
+                    for (1..10) {
+                        if (-d "$tmp/CD$_"
+                            and defined $this->{m_basesubdir}->{$_}
+                        ) {
+                            qx(cp -a $tmp/CD$_/* $this->{m_basesubdir}->{$_});
+                            $this->logMsg('I',
+                                "Unpack CD$_ for $packPointer->{name} "
+                            );
+                        } elsif ($_ eq 1) {
+                            my $msg;
+                            $msg = "No CD1 directory on $packPointer->{localfile}";
+                            $this->logMsg('W', $msg);
+                        }
                     }
+if (0) {
+# we will drop this ... hopefully ...
                     if(-f "$tmp/usr/share/mini-iso-rmlist") {
                         my $RMLIST;
                         if (! open(
@@ -1507,17 +1515,6 @@ sub unpackMetapackages {
                             chomp(@rmfiles);
                             $this->{m_rmlists}->{$arch} = [@rmfiles];
                             close $RMLIST;
-                        }
-                    }
-                    # copy content of CD2 ... CD<i> subdirs if exists:
-                    for (2..10) {
-                        if (-d "$tmp/CD$_"
-                            and defined $this->{m_basesubdir}->{$_}
-                        ) {
-                            qx(cp -a $tmp/CD$_/* $this->{m_basesubdir}->{$_});
-                            $this->logMsg('I',
-                                "Unpack CD$_ for $packPointer->{name} "
-                            );
                         }
                     }
                     # THEMING
@@ -1627,6 +1624,7 @@ sub unpackMetapackages {
                     next ARCH;
                 }
             }
+}
             # Package was not found
             if (!defined(
                 $this->{m_proddata}->getOpt("IGNORE_MISSING_META_PACKAGES")
@@ -2143,10 +2141,6 @@ sub createMetadata {
     $this->{m_metacreator}->createMetadata();
     # creates the patters file. Rest will follow later
 
-    # Handle plugins
-
-    # moved to beginnig after diffing with autobuild:
-    # step 1: ChangeLog file
     my $make_listings = $this->{m_proddata}->getVar("MAKE_LISTINGS");
 
 if (0) {
@@ -2179,7 +2173,7 @@ if (0) {
     }
 }
 
-    # step 2: media file
+    # step 2: media.X/build file
     $this->logMsg('I', "Creating media file in all media:");
     my $manufacturer = $this->{m_proddata}->getVar("VENDOR");
     if($manufacturer) {
@@ -2192,29 +2186,6 @@ if (0) {
             ) {
                 $num = 1;
             }
-            my $mediafile = "$this->{m_basesubdir}->{$n}/media.$num/media";
-            my $MEDIA = FileHandle -> new();
-            if(! $MEDIA -> open (">$mediafile")) {
-                $this->logMsg('E', "Cannot create file <$mediafile>");
-                return;
-            }
-            print $MEDIA "$manufacturer\n";
-            print $MEDIA qx(date +%Y%m%d%H%M%S);
-            if($num == 1) {
-                # some specialities for medium number 1: contains a line with
-                # the number of media
-                if ( $this->{m_proddata}->getVar("FLAVOR") eq "ftp"
-                    or $this->{m_proddata}->getVar("FLAVOR") eq "POOL"
-                    or $n == $this->{m_debugmedium}
-                ) {
-                    print $MEDIA "1\n";
-                } else {
-                    my $set = @media;
-                    $set-- if ( $this->{m_debugmedium} >= 2 );
-                    print $MEDIA $set."\n";
-                }
-            }
-            $MEDIA -> close();
             my $bfile = "$this->{m_basesubdir}->{$n}/media.$num/build";
             my $BUILD;
             if(! open($BUILD, ">", $bfile)) {
@@ -2231,162 +2202,7 @@ if (0) {
     }
 
     # step X: create package links for installer
-    $this->createBootPackageLinks();
-
-# skip the rest if we are not creating susetags
-# FIXME: anything what we still need?
-return;
-
-    # step 3: create info.txt for Beta releases.
-    $this->logMsg('I', "Handling Beta information on media:");
-    my $beta_version = $this->{m_proddata}->getOpt("BETA_VERSION");
-    my $summary = $this->{m_proddata}->getVar("PRODUCT_SUMMARY");
-
-    # step 4: fallbacks for pre openSUSE 13.2/SLE 12
-    $summary = $this->{m_proddata}->getInfo("LABEL") unless $summary;
-    $summary = $this->{m_proddata}->getInfo("SUMMARY") unless $summary;
-    if (defined($beta_version)) {
-        my $dist_string = $summary." ".${beta_version};
-        my $readme_file = "$this->{m_basesubdir}->{'1'}/README.BETA";
-        my $info_file   = "$this->{m_basesubdir}->{'1'}/media.1/info.txt";
-        if ( -e $readme_file ) {
-            if (system(
-                    "sed", "-i", "s/BETA_DIST_VERSION/$dist_string/",
-                    $readme_file
-                ) == 0
-            ) {
-                if (system("ln", "-sf", "../README.BETA", $info_file) != 0 ) {
-                    $this->logMsg('W', "Failed to symlink README.BETA file!");
-                }
-            } else {
-                $this->logMsg('W',
-                    "Failed to replace beta version in README.BETA file!"
-                );
-            }
-        } else {
-            $this->logMsg('W',
-                "No README.BETA file, but beta version is defined!"
-            );
-        }
-    } else {
-        unlink("$this->{m_basesubdir}->{'1'}/README.BETA");
-    }
-
-    # step 5: products file
-    $this->logMsg('I', "Creating products file in all media:");
-    my $proddir  = $this->{m_proddata}->getVar("PRODUCT_DIR");
-    my $prodname = $this->{m_proddata}->getVar("PRODUCT_NAME");
-    my $prodver  = $this->{m_proddata}->getVar("PRODUCT_VERSION");
-    my $prodrel  = $this->{m_proddata}->getVar("PRODUCT_RELEASE");
-    my $sp_ver   = $this->{m_proddata}->getVar("SP_VERSION");
-    $prodrel = $this->{m_proddata}->getInfo("RELEASE") unless defined($prodrel); # old style before 13.2
-    $prodrel = "-$prodrel" if defined($prodrel) and $prodrel ne "";
-    $prodname =~ s/\ /-/g;
-    $prodver .= ".$sp_ver" if defined($sp_ver);
-    if (defined($proddir)
-        and defined($prodname)
-        and defined($prodver)
-        and defined($summary)
-    ) {
-        $summary =~ s{\s+}{-}g; # replace space(s) by a single dash
-        for my $n($this->getMediaNumbers()) {
-            my $num = $n;
-            if ( $this->{m_proddata}->getVar("FLAVOR") eq "ftp"
-                or $this->{m_proddata}->getVar("FLAVOR") eq "POOL"
-                or $n == $this->{m_debugmedium}
-            ) {
-                $num = 1;
-            }
-            my $productsfile =
-                "$this->{m_basesubdir}->{$n}/media.$num/products";
-            my $PRODUCT;
-            if(! open($PRODUCT, ">", $productsfile)) {
-                die "Cannot create $productsfile";
-            }
-            print $PRODUCT "$proddir $summary $prodver$prodrel\n";
-            close $PRODUCT;
-        }
-    } else {
-        my $msg;
-        $msg = '[createMetadata] one or more of the following  variables ';
-        $msg.= 'are missing: PRODUCT_DIR|PRODUCT_NAME|PRODUCT_VERSION|LABEL';
-        $this->logMsg('E', $msg);
-    }
-
-    # step 6: LISTINGS
-    unless (defined($make_listings) && $make_listings eq "false") {
-        $this->logMsg('I', "Calling mk_listings:");
-        my $listings = "/usr/bin/mk_listings";
-        if(! (-f $listings or -x $listings)) {
-            my $msg = "[createMetadata] excutable `$listings` not found. "
-                . 'Maybe package `inst-source-utils` is not installed?';
-            $this->logMsg('W', $msg);
-            return;
-        }
-        my $cmd = "$listings ".$this->{m_basesubdir}->{'1'};
-        my @data = qx($cmd);
-        undef $cmd;
-        $this->logMsg('I', "[createMetadata] $listings output:");
-        for my $item (@data) {
-            chomp $item;
-            $this->logMsg('I', "\t$item");
-        }
-        @data = (); # clear list
-    }
-    
-    # step 7: SHA1SUMS
-    $this->logMsg('I', "Calling create_sha1sums:");
-    my $csha1sum = "/usr/bin/create_sha1sums";
-    my $s1sum_opts = $this->{m_proddata}->getVar("SHA1OPT");
-    if (! defined($s1sum_opts)) {
-        $s1sum_opts = "";
-    }
-    if (! (-f $csha1sum or -x $csha1sum)) {
-        my $msg;
-        $msg = "[createMetadata] excutable `$csha1sum` not found. ";
-        $msg.= 'Maybe package `inst-source-utils` is not installed?';
-        $this->logMsg('E', $msg);
-        return;
-    }
-    for my $sd($this->getMediaNumbers()) {
-        my @data = qx($csha1sum $s1sum_opts $this->{m_basesubdir}->{$sd});
-        if ($? >> 8 != 0) {
-            $this->logMsg('E', "[createMetadata] $csha1sum failed");
-        }else{
-            $this->logMsg('I', "[createMetadata] $csha1sum output:");
-        }
-        for my $item (@data) {
-            chomp $item;
-            $this->logMsg('I', "\t$item");
-        }
-    }
-
-    ## step 8: DIRECTORY.YAST FILES
-    $this->logMsg('I', "Calling create_directory.yast:");
-    my $dy = "/usr/bin/create_directory.yast";
-    if (! (-f $dy or -x $dy)) {
-        my $msg;
-        $msg = "[createMetadata] excutable `$dy` not found. ";
-        $msg.= 'Maybe package `inst-source-utils` is not installed?';
-        $this->logMsg('W', $msg);
-        return;
-    }
-    for my $d($this->getMediaNumbers()) {
-        my $dbase = $this->{m_basesubdir}->{$d};
-        my @dlist;
-        push @dlist, "$dbase";
-        # boot may be nonexistent if no metapack creates it
-        if(-d "$dbase/boot") {
-            push @dlist, "$dbase/boot" ;
-            push @dlist, glob("$dbase/boot/*");
-            push @dlist, glob("$dbase/boot/*/loader");
-        }
-        push @dlist, "$dbase/media.1";
-        push @dlist, "$dbase/media.1/license";
-        push @dlist, "$dbase/images";
-        push @dlist, "$dbase/setup/slide";
-    }
-    return;
+#    $this->createBootPackageLinks();
 }
 
 #==========================================

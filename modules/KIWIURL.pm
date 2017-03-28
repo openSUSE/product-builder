@@ -581,10 +581,9 @@ sub openSUSEpath {
     #==========================================
     # normalize URL data
     #------------------------------------------
-    if ((! defined $module) || ($module !~ /^(opensuse|obs):\/\//)) {
+    if ((! defined $module) || ($module !~ /^obs:\/\//)) {
         return;
     }
-    $module =~ s/opensuse:\/\///;
     $module =~ s/obs:\/\///;
     $module =~ s/\/$//;
     $module =~ s/^\///;
@@ -615,19 +614,13 @@ sub openSUSEpath {
         if ($type ne "opensuse") {
             next;
         }
-        foreach my $lookup ("/repodata/repomd.xml","/media.1/media") {
-            #==========================================
-            # Try to access URL from matches
-            #------------------------------------------
-            my $response = $browser -> get ( $url.$lookup );
-            if ($response -> is_success) {
-                if ($lookup eq "/repodata/repomd.xml") {
-                    $this->{type} = "rpm-md";
-                } else {
-                    $this->{type} = "yast2";
-                }
-                return $url;
-            }
+        #==========================================
+        # Try to access URL from matches
+        #------------------------------------------
+        my $response = $browser -> get ( $url."/repodata/repomd.xml" );
+        if ($response -> is_success) {
+            $this->{type} = "rpm-md";
+            return $url;
         }
     }
     if (! defined $quiet) {
