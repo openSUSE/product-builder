@@ -1487,16 +1487,16 @@ sub unpackMetapackages {
                     );
                     # copy content of CD1 ... CD<i> subdirs if exists:
                     for (1..10) {
-                        if (-d "$tmp/CD$_"
+                        if (-d "$tmp/usr/lib/skelcd/CD$_"
                             and defined $this->{m_basesubdir}->{$_}
                         ) {
-                            qx(cp -a $tmp/CD$_/* $this->{m_basesubdir}->{$_});
+                            qx(cp -a $tmp/usr/lib/skelcd/CD$_/* $this->{m_basesubdir}->{$_});
                             $this->logMsg('I',
                                 "Unpack CD$_ for $packPointer->{name} "
                             );
                         } elsif ($_ eq 1) {
                             my $msg;
-                            $msg = "No CD1 directory on $packPointer->{localfile}";
+                            $msg = "No /usr/lib/skelcd/CD1 directory in $packPointer->{localfile}";
                             $this->logMsg('W', $msg);
                         }
                     }
