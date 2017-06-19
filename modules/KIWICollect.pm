@@ -1462,6 +1462,7 @@ sub unpackMetapackages {
                     . '<';
                 $this->logMsg('I', $msg);
             }
+            my $packageFound;
             FARCH:
             for my $arch(@fallbacklist) {
                 PACKKEY:
@@ -1492,8 +1493,9 @@ sub unpackMetapackages {
                         ) {
                             qx(cp -a $tmp/usr/lib/skelcd/CD$_/* $this->{m_basesubdir}->{$_});
                             $this->logMsg('I',
-                                "Unpack CD$_ for $packPointer->{name} "
+                                "Unpack CD$_ for $packPointer->{localfile} "
                             );
+                            $packageFound = 1;
                         } elsif ($_ eq 1) {
                             my $msg;
                             $msg = "No /usr/lib/skelcd/CD1 directory in $packPointer->{localfile}";
@@ -1504,7 +1506,7 @@ sub unpackMetapackages {
             }
 
             # Package was not found
-            if (!defined(
+            if ($packageFound || !defined(
                 $this->{m_proddata}->getOpt("IGNORE_MISSING_META_PACKAGES")
             )|| $this->{m_proddata}->getOpt("IGNORE_MISSING_META_PACKAGES")
                 ne "true" 
