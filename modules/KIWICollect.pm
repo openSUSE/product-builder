@@ -1492,9 +1492,7 @@ sub unpackMetapackages {
                             and defined $this->{m_basesubdir}->{$_}
                         ) {
                             qx(cp -a $tmp/usr/lib/skelcd/CD$_/* $this->{m_basesubdir}->{$_});
-                            $this->logMsg('I',
-                                "Unpack CD$_ for $packPointer->{localfile} "
-                            );
+                            $this->logMsg('I', "Unpack CD$_");
                             $packageFound = 1;
                         } elsif ($_ eq 1) {
                             my $msg;
@@ -1502,21 +1500,19 @@ sub unpackMetapackages {
                             $this->logMsg('W', $msg);
                         }
                     }
-                }
-            }
+             }
 
-            # Package was not found
-            if ($packageFound || !defined(
-                $this->{m_proddata}->getOpt("IGNORE_MISSING_META_PACKAGES")
-            )|| $this->{m_proddata}->getOpt("IGNORE_MISSING_META_PACKAGES")
-                ne "true" 
-            ) {
-                # abort
-                my $msg;
-                $msg = "Metapackage <$metapack> not available for ";
-                $msg.= "required $reqArch architecture!";
-                $this->logMsg('E', $msg);
-            }
+             # Package was not found
+             if (!$packageFound && (!defined(
+                 $this->{m_proddata}->getOpt("IGNORE_MISSING_META_PACKAGES")
+                 )||$this->{m_proddata}->getOpt("IGNORE_MISSING_META_PACKAGES") ne "true" )) {
+                 # abort
+                 my $msg;
+                 $msg = "Metapackage <$metapack> not available for ";
+                 $msg.= "required $reqArch architecture!";
+                 $this->logMsg('E', $msg);
+             }
+          }
         }
     }
     # cleanup old files:
@@ -1998,6 +1994,7 @@ sub createMetadata {
     # retrieve a complete list of all loaded plugins
     my %plugins = $this->{m_metacreator}->getPluginList();
 
+    $this->logMsg('I', "Executing all plugins...");
     # create required directories if necessary:
     for my $i(keys(%plugins)) {
         my $p = $plugins{$i};
@@ -2017,7 +2014,6 @@ sub createMetadata {
         }
     }
 
-    $this->logMsg('I', "Executing all plugins...");
     $this->{m_metacreator}->createMetadata();
     # creates the patters file. Rest will follow later
 
