@@ -1989,20 +1989,23 @@ sub collectProducts {
 #==========================================
 # createMetadata
 #------------------------------------------
+
 sub createMetadata {
     my $this = shift;
+
     # retrieve a complete list of all loaded plugins
     my %plugins = $this->{m_metacreator}->getPluginList();
 
-    $this->logMsg('I', "Executing all plugins...");
     # create required directories if necessary:
     for my $i(keys(%plugins)) {
         my $p = $plugins{$i};
         $this->logMsg('I', "Processing plugin ".$p->name()."");
-        my @requireddirs = $p->requiredDirs();
+        my @requireddirs = $p->requiredDirs($this);
+        $this->logMsg('I', "DIRS @requireddirs");
         # this may be a list and each entry may look like "/foo/bar/baz/"
         # in the worst case.
         for my $dir(@requireddirs) {
+        $this->logMsg('I', " for dir $dir");
             # just to be on the safe side: split leading and trailing slashes
             $dir =~ s{^/(.*)/$}{$1};
             my @sublist = split('/', $dir);
@@ -2014,40 +2017,17 @@ sub createMetadata {
         }
     }
 
-    $this->{m_metacreator}->createMetadata();
-    # creates the patters file. Rest will follow later
-
-    my $make_listings = $this->{m_proddata}->getVar("MAKE_LISTINGS");
-
-if (0) {
-# DISABLE FOR NOW OR DROP
-    unless (defined($make_listings) && $make_listings eq "false") {
-        $this->logMsg('I', "Running mk_changelog for base directory");
-        my $mk_cl = "/usr/bin/mk_changelog";
-        if(! (-f $mk_cl or -x $mk_cl)) {
-            my $msg = "[createMetadata] excutable `$mk_cl` not found. Maybe "
-                    . 'package `inst-source-utils` is not installed?';
-            $this->logMsg('E', $msg);
-            return;
-        }
-        my @data = qx($mk_cl $this->{m_basesubdir}->{'1'});
-        my $res = $? >> 8;
-        if($res == 0) {
-            $this->logMsg('I', "$mk_cl finished successfully.");
-        }
-        else {
+    $this->logMsg('I', "Executing all plugins...");
+    foreach my $order(sort {$a <=> $b} keys(%{$this->{m_metacreator}->{m_handlers}})) {
+        if($this->{m_metacreator}->{m_handlers}->{$order}->ready()) {
+            $this->logMsg('I', "Execute plugin ".$this->{m_metacreator}->{m_handlers}->{$order}->name()." order $order");
+            $this->{m_metacreator}->{m_handlers}->{$order}->execute();
+        } else {
             $this->logMsg(
-                'E', "$mk_cl finished with errors: returncode was $res"
+                "W", "Plugin ".$this->{m_metacreator}->{m_handlers}->{$order}->name()." is not activated yet!"
             );
         }
-        $this->logMsg('I', "[createMetadata] $mk_cl output:");
-        foreach(@data) {
-            chomp $_;
-            $this->logMsg('I', "\t$_");
-        }
-        @data = ();
     }
-}
 
     # step 2: media.X/build file
     $this->logMsg('I', "Creating media file in all media:");
