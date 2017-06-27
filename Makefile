@@ -18,6 +18,7 @@ KIWIBINVZ   = ${buildroot}/usr/bin
 #============================================
 # Variables... 
 #--------------------------------------------
+KIWIMETAVZ  = ${kiwi_prefix}/metadata
 KIWIMODVZ   = ${kiwi_prefix}/modules
 KIWIXSLVZ   = ${kiwi_prefix}/xsl
 
@@ -28,7 +29,7 @@ install: uninstall
 	#============================================
 	# Install base directories
 	#--------------------------------------------
-	install -d -m 755 ${KIWIMODVZ} ${KIWIXSLVZ} ${KIWIBINVZ}
+	install -d -m 755 ${KIWIMODVZ} ${KIWIXSLVZ} ${KIWIBINVZ} ${KIWIMETAVZ}
 
 	#============================================
 	# Install KIWI base and modules
@@ -38,6 +39,11 @@ install: uninstall
 	for i in $(shell find modules -type f | grep -v -E '\.test');do \
 		install -m 644 $$i ${KIWIMODVZ} ;\
 	done
+
+	#============================================
+	# Install KIWI metadata files
+	#--------------------------------------------
+	install -m 644 metadata/* ${KIWIMETAVZ}
 
 modules/KIWISchema.rng: modules/KIWISchema.rnc
 	@echo Building Schema...
