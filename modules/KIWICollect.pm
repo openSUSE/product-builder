@@ -1494,6 +1494,12 @@ sub unpackMetapackages {
                             qx(cp -a $tmp/usr/lib/skelcd/CD$_/* $this->{m_basesubdir}->{$_});
                             $this->logMsg('I', "Unpack CD$_");
                             $packageFound = 1;
+                        } elsif (-d "$tmp/CD$_"
+                            and defined $this->{m_basesubdir}->{$_}
+                        ) {
+                            qx(cp -a $tmp/CD$_/* $this->{m_basesubdir}->{$_});
+                            $this->logMsg('W', "Unpack from old legacy /CD$_ directory");
+                            $packageFound = 1;
                         } elsif ($_ eq 1) {
                             my $msg;
                             $msg = "No /usr/lib/skelcd/CD1 directory in $packPointer->{localfile}";
