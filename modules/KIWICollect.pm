@@ -193,9 +193,6 @@ sub logMsg {
     if ($this->{m_logStdOut} == 1 || $this->{m_debug} >= 1) {
         # significant speed up in production mode
         print $out;
-        if ( $mode eq 'E' ) {
-            exit 1;
-        }
     } else {
         if ( $mode eq 'E' ) {
             $this->{m_logger}->error($out);
@@ -207,7 +204,8 @@ sub logMsg {
             $this->{m_logger}->info($out);
         }
     }
-    return;
+
+    exit 1 if $mode eq 'E';
 }
 
 #==========================================
