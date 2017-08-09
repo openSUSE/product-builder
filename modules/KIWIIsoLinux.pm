@@ -165,11 +165,17 @@ sub new {
                 if (-d $source."/".$base{ix86}{boot}) {
                     $catalog[0] = "ix86_legacy";
                 }
+                if (-d $source."/".$base{x86_64}{boot}) {
+                    $catalog[0] = "x86_64_legacy";
+                }
                 $catalog[1] = "s390_ikr";
             }
             if ($arch eq "s390x") {
                 if (-d $source."/".$base{ix86}{boot}) {
                     $catalog[0] = "ix86_legacy";
+                }
+                if (-d $source."/".$base{x86_64}{boot}) {
+                    $catalog[0] = "x86_64_legacy";
                 }
                 $catalog[1] = "s390x_ikr";
             }
