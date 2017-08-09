@@ -162,11 +162,15 @@ sub new {
                 $catalog[0] = "ppc64_default";
             }
             if ($arch eq "s390") {
-                $catalog[0] = "ix86_legacy";
+                if (-d $source."/".$base{ix86}{boot}) {
+                    $catalog[0] = "ix86_legacy";
+                }
                 $catalog[1] = "s390_ikr";
             }
             if ($arch eq "s390x") {
-                $catalog[0] = "ix86_legacy";
+                if (-d $source."/".$base{ix86}{boot}) {
+                    $catalog[0] = "ix86_legacy";
+                }
                 $catalog[1] = "s390x_ikr";
             }
         }
