@@ -1503,7 +1503,7 @@ sub unpackMetapackages {
                             $this->logMsg('W', $msg);
                         }
                     }
-                    next PACKKEY $packageFound;
+                    next PACKKEY if $packageFound;
              }
 
              # Package was not found
