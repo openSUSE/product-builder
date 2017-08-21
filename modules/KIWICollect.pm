@@ -1542,7 +1542,7 @@ sub unpackMetapackages {
                             $this->logMsg('W', $msg);
                         }
                     }
-                    next PACKKEY if $packageFound;
+                    next ARCH if $packageFound;
              }
 
              # Package was not found
