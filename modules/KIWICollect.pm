@@ -1503,12 +1503,13 @@ sub unpackMetapackages {
                             $this->logMsg('W', $msg);
                         }
                     }
+                    next PACKKEY $packageFound;
              }
 
              # Package was not found
-             if (!$packageFound && (!defined(
+             if (!defined(
                  $this->{m_proddata}->getOpt("IGNORE_MISSING_META_PACKAGES")
-                 )||$this->{m_proddata}->getOpt("IGNORE_MISSING_META_PACKAGES") ne "true" )) {
+                 )||$this->{m_proddata}->getOpt("IGNORE_MISSING_META_PACKAGES") ne "true" ) {
                  # abort
                  my $msg;
                  $msg = "Metapackage <$metapack> not available for ";
