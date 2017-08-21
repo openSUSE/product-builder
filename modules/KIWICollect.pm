@@ -1328,7 +1328,46 @@ sub collectPackages {
         $support_fd -> close();
     }
 
-    # write out the channel files based on the collected rpms
+    # step 5: products file
+    $this->logMsg('I', "Creating products file in all media:");
+    my $prodname    = $this->{m_proddata}->getVar("PRODUCT_NAME");
+    my $prodsummary = $this->{m_proddata}->getVar("PRODUCT_SUMMARY");
+    my $prodver     = $this->{m_proddata}->getVar("PRODUCT_VERSION");
+    my $prodrel     = $this->{m_proddata}->getVar("PRODUCT_RELEASE");
+    my $sp_ver      = $this->{m_proddata}->getVar("SP_VERSION");
+    $prodrel = "-$prodrel" if defined($prodrel) and $prodrel ne "";
+    $prodname =~ s/\ /-/g;
+    $prodver .= ".$sp_ver" if defined($sp_ver);
+
+    unless (defined($prodname) and defined($prodver) and defined($prodsummary))
+    {
+        my $msg;
+        $msg = '[createMetadata] one or more of the following  variables ';
+        $msg.= 'are missing: PRODUCT_NAME|PRODUCT_VERSION|LABEL';
+        $this->logMsg('E', $msg);
+        return 1;
+    }
+
+    $prodsummary =~ s{\s+}{-}g; # replace space(s) by a single dash
+    for my $n($this->getMediaNumbers()) {
+        my $num = $n;
+        if ( $this->{m_proddata}->getVar("FLAVOR") eq "ftp"
+            or $this->{m_proddata}->getVar("FLAVOR") eq "POOL"
+            or $n == $this->{m_debugmedium}
+        ) {
+            $num = 1;
+        }
+        my $productsfile =
+            "$this->{m_basesubdir}->{$n}/media.$num/products";
+        my $PRODUCT;
+        if(! open($PRODUCT, ">", $productsfile)) {
+            die "Cannot create $productsfile";
+        }
+        print $PRODUCT "/ $prodsummary $prodver$prodrel\n";
+        close $PRODUCT;
+    }
+
+    # step 6: write out the channel files based on the collected rpms
     for my $m (keys(%{$this->{m_reportLog}})) {
         my $medium = $this->{m_reportLog}->{$m};
         my $fd;
