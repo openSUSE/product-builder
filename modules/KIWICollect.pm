@@ -1343,7 +1343,7 @@ sub collectPackages {
     {
         my $msg;
         $msg = '[createMetadata] one or more of the following  variables ';
-        $msg.= 'are missing: PRODUCT_NAME|PRODUCT_VERSION|LABEL';
+        $msg.= 'are missing: PRODUCT_NAME|PRODUCT_VERSION|PRODUCT_SUMMARY';
         $this->logMsg('E', $msg);
         return 1;
     }
