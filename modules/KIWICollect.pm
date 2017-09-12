@@ -107,6 +107,7 @@ sub new {
         m_debugPacks   => undef,
         m_metaPacks    => undef,
         m_metafiles    => undef,
+        m_products     => undef,
         m_browser      => undef,
         m_srcmedium    => -1,
         m_debugmedium  => -1,
@@ -1343,7 +1344,7 @@ sub collectPackages {
     {
         my $msg;
         $msg = '[createMetadata] one or more of the following  variables ';
-        $msg.= 'are missing: PRODUCT_NAME|PRODUCT_VERSION|PRODUCT_SUMMARY';
+        $msg.= 'are missing: PRODUCT_NAME|PRODUCT_VERSION|LABEL';
         $this->logMsg('E', $msg);
         return 1;
     }
@@ -1636,6 +1637,7 @@ sub lookUpAllPackages {
     my $this = shift;
     my $retval = 0;
     my $packPool = {};
+    my $productList = [];
     my $num_repos = keys %{$this->{m_repos}};
     my $count_repos = 0;
     my $last_progress_time = 0;
@@ -1651,7 +1653,7 @@ sub lookUpAllPackages {
         $count_repos++;
 
         DIR:
-        for my $d(keys(%{$this->{m_repos}->{$r}->{'srcdirs'}})) {
+        for my $d(sort keys(%{$this->{m_repos}->{$r}->{'srcdirs'}})) {
             my $num_files = @{$this->{m_repos}->{$r}->{'srcdirs'}->{$d}};
             my $count_files = 0;
             $count_dirs++;
@@ -1692,7 +1694,10 @@ sub lookUpAllPackages {
                     'NOSOURCE',
                     'NOPATCH',
                     'DISTURL',
-                    'BUILDTIME'
+                    'BUILDTIME',
+                    'PROVIDENAME',
+                    'PROVIDEVERSION',
+                    'PROVIDEFLAGS',
                 );
                 if(!%flags || !$flags{'NAME'} || !$flags{'RELEASE'}
                     || !$flags{'VERSION'} || !$flags{'RELEASE'}
@@ -1760,12 +1765,21 @@ sub lookUpAllPackages {
                         $packPool->{$name} = $store;
                     }
                     $store->{$repokey} = $package;
+		    # look for products defined inside
+		    RPMQ::rpmq_add_flagsvers(\%flags, 'PROVIDENAME', 'PROVIDEFLAGS', 'PROVIDEVERSION');
+                    for my $provide (@{$flags{'PROVIDENAME'} || []}) {
+			if ($provide =~ /^product\(\) = (.+)$/) {
+                            $this->logMsg('I', "Found product provides for $1");
+		            push @$productList, $1;
+		        }
+                    }
                     $retval++;
                 } # read RPM header
             } # foreach URI
         } # foreach DIR
     } # foreach REPO
     # set result
+    $this->{m_products} = $productList;
     $this->{m_packagePool} = $packPool;
     return $retval;
 }
