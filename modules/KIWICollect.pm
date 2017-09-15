@@ -1530,6 +1530,7 @@ sub unpackMetapackages {
                             and defined $this->{m_basesubdir}->{$_}
                         ) {
                             qx(cp -a $tmp/usr/lib/skelcd/CD$_/* $this->{m_basesubdir}->{$_});
+                            qx(cp -a $tmp/usr/lib/skelcd/CD$_/.treeinfo $this->{m_basesubdir}->{$_}) if (-f "$tmp/usr/lib/skelcd/CD$_/.treeinfo");
                             $this->logMsg('I', "Unpack CD$_");
                             $packageFound = 1;
                         } elsif (-d "$tmp/CD$_"
