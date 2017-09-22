@@ -548,7 +548,7 @@ sub Init {
         return;
     }
     my @media = $this->getMediaNumbers();
-    my $mult = $this->{m_proddata}->getVar("MULTIPLE_MEDIA", "yes");
+    my $mult = $this->{m_proddata}->getVar("MULTIPLE_MEDIA", "true");
     my $dirext = undef;
     if($mult eq "no" || $mult eq "false") {
         if(scalar(@media) == 1) {
@@ -558,7 +558,7 @@ sub Init {
             #"medium=<number>" somewhere!
             my $msg = 'You want a single medium distro but specified '
                 . "medium=... for some packages\n\tIgnoring the "
-                . 'MULTIPLE_MEDIA=no flag!';
+                . 'MULTIPLE_MEDIA=false flag!';
             $this->logMsg('W', $msg);
         }
     }
@@ -570,12 +570,7 @@ sub Init {
         $this->{m_dirlist}->{"$dirbase/repodata"} = 1;
         my $curdir = "$dirbase/";
         my $num = $n;
-        if ( $this->{m_proddata}->getVar("FLAVOR", '') eq "ftp"
-            or $this->{m_proddata}->getVar("FLAVOR", '') eq "POOL"
-            or $n == $this->{m_debugmedium}
-        ) {
-            $num = 1;
-        }
+        $num = 1 if seperateMedium($n);
         $this->{m_dirlist}->{"$dirbase/media.$num"} = 1;
         $this->{m_basesubdir}->{$n} = "$dirbase";
         $this->{m_dirlist}->{"$this->{m_basesubdir}->{$n}"} = 1;
@@ -772,7 +767,7 @@ sub mainTask {
             $vname =~ s/-Media//;
             $vname =~ s/-Build// if length($vname) > ($volid_maxlen - 4);
             my $vid = substr($vname,0,($volid_maxlen));
-            if ($this->{m_proddata}->getVar("MULTIPLE_MEDIA", "yes") eq "yes") {
+            if ($this->{m_proddata}->getVar("MULTIPLE_MEDIA", "true") eq "true") {
                 $vid = sprintf(
                     "%s.%03d",
                     substr($vname,0,($volid_maxlen - 4)), $cd
@@ -789,7 +784,6 @@ sub mainTask {
             $attr .= " -V \"$vid\"";
             my $checkmedia = '';
             if ( defined($this->{m_proddata}->getVar("RUN_MEDIA_CHECK"))
-                && $this->{m_proddata}->getVar("RUN_MEDIA_CHECK") ne "0"
                 && $this->{m_proddata}->getVar("RUN_MEDIA_CHECK") ne "false"
             ) {
                 $checkmedia = "checkmedia";
@@ -1198,6 +1192,22 @@ sub setupPackageFiles {
     return $retval;
 }
 
+
+#================================================
+# Decide if a medium is joined with others or not
+#------------------------------------------------
+sub seperateMedium {
+    my ($this, $number) = @_;
+
+    # debug medium should always be optional to ship
+    # the dependency solver need to tell if a package is not matching
+    return 1 if $number == $this->{m_debugmedium};
+
+    return 1 if $this->{m_proddata}->getVar("SEPERATE_MEDIA") eq "true";
+
+    return 0;
+}
+
 #==========================================
 # collectPackages
 #------------------------------------------
@@ -1243,10 +1253,42 @@ sub collectPackages {
     $this->{m_sourcePacks}->{_name} = { label => "source" };
     $this->{m_debugPacks}->{_name}  = { label => "debug" };
 
-    # step 2:
-    if($this->{m_debug}) {
-        $this->logMsg('I', "STEP 2 [collectPackages]" );
-        $this->logMsg('I', "Select packages and create links");
+    # step 2: media file
+    $this->logMsg('I', "Creating media file in all media:");
+    my $manufacturer = $this->{m_proddata}->getVar("VENDOR");
+    my $medium_name  = $this->{m_proddata}->getVar("MEDIUM_NAME");
+    if($manufacturer && $medium_name) {
+        my @media = $this->getMediaNumbers();
+        for my $n(@media) {
+            my $num = $n;
+            $num = 1 if seperateMedium($n);
+            my $mediafile = "$this->{m_basesubdir}->{$n}/media.$num/media";
+            my $MEDIA = FileHandle -> new();
+            if(! $MEDIA -> open (">$mediafile")) {
+                $this->logMsg('E', "Cannot create file <$mediafile>");
+                return;
+            }
+            print $MEDIA "$manufacturer\n";
+            print $MEDIA "$medium_name (";
+            print $MEDIA $this->{m_proddata}->getVar("BUILD_ID", "0")."\n";
+            print $MEDIA ")";
+            if($num == 1) {
+                # some specialities for medium number 1: contains a line with
+                # the number of media
+                if (seperateMedium($n)) {
+                    print $MEDIA "1\n";
+                } else {
+                    my $set = @media;
+                    $set-- if ( $this->{m_debugmedium} >= 2 );
+                    print $MEDIA $set."\n";
+                }
+            }
+            $MEDIA -> close();
+        }
+    } else {
+        $this->logMsg('E',
+            "[createMetadata] required variable \"VENDOR\" not set"
+        );
     }
 
     # Setup the package FS layout
@@ -1352,12 +1394,7 @@ sub collectPackages {
     $prodsummary =~ s{\s+}{-}g; # replace space(s) by a single dash
     for my $n($this->getMediaNumbers()) {
         my $num = $n;
-        if ( $this->{m_proddata}->getVar("FLAVOR") eq "ftp"
-            or $this->{m_proddata}->getVar("FLAVOR") eq "POOL"
-            or $n == $this->{m_debugmedium}
-        ) {
-            $num = 1;
-        }
+        $num = 1 if seperateMedium($n);
         my $productsfile =
             "$this->{m_basesubdir}->{$n}/media.$num/products";
         my $PRODUCT;
@@ -2087,37 +2124,6 @@ sub createMetadata {
             );
         }
     }
-
-    # step 2: media.X/build file
-    $this->logMsg('I', "Creating media file in all media:");
-    my $manufacturer = $this->{m_proddata}->getVar("VENDOR");
-    if($manufacturer) {
-        my @media = $this->getMediaNumbers();
-        for my $n(@media) {
-            my $num = $n;
-            if ( $this->{m_proddata}->getVar("FLAVOR") eq "ftp"
-                or $this->{m_proddata}->getVar("FLAVOR") eq "POOL"
-                or $n == $this->{m_debugmedium}
-            ) {
-                $num = 1;
-            }
-            my $bfile = "$this->{m_basesubdir}->{$n}/media.$num/build";
-            my $BUILD;
-            if(! open($BUILD, ">", $bfile)) {
-                $this->logMsg('E', "Cannot create file <$bfile>!");
-                return;
-            }
-            print $BUILD $this->{m_proddata}->getVar("BUILD_ID", "0")."\n";
-            close $BUILD;
-        }
-    } else {
-        $this->logMsg('E',
-            "[createMetadata] required variable \"VENDOR\" not set"
-        );
-    }
-
-    # step X: create package links for installer
-#    $this->createBootPackageLinks();
 }
 
 #==========================================
