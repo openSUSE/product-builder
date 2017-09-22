@@ -1268,10 +1268,9 @@ sub collectPackages {
                 $this->logMsg('E', "Cannot create file <$mediafile>");
                 return;
             }
-            print $MEDIA "$manufacturer\n";
-            print $MEDIA "$medium_name (";
+            print $MEDIA "$manufacturer - ";
+            print $MEDIA "$medium_name\n";
             print $MEDIA $this->{m_proddata}->getVar("BUILD_ID", "0")."\n";
-            print $MEDIA ")";
             if($num == 1) {
                 # some specialities for medium number 1: contains a line with
                 # the number of media
