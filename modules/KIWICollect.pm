@@ -570,7 +570,7 @@ sub Init {
         $this->{m_dirlist}->{"$dirbase/repodata"} = 1;
         my $curdir = "$dirbase/";
         my $num = $n;
-        $num = 1 if seperateMedium($n);
+        $num = 1 if $this->seperateMedium($n);
         $this->{m_dirlist}->{"$dirbase/media.$num"} = 1;
         $this->{m_basesubdir}->{$n} = "$dirbase";
         $this->{m_dirlist}->{"$this->{m_basesubdir}->{$n}"} = 1;
@@ -1261,7 +1261,7 @@ sub collectPackages {
         my @media = $this->getMediaNumbers();
         for my $n(@media) {
             my $num = $n;
-            $num = 1 if seperateMedium($n);
+            $num = 1 if $this->seperateMedium($n);
             my $mediafile = "$this->{m_basesubdir}->{$n}/media.$num/media";
             my $MEDIA = FileHandle -> new();
             if(! $MEDIA -> open (">$mediafile")) {
@@ -1274,7 +1274,7 @@ sub collectPackages {
             if($num == 1) {
                 # some specialities for medium number 1: contains a line with
                 # the number of media
-                if (seperateMedium($n)) {
+                if ($this->seperateMedium($n)) {
                     print $MEDIA "1\n";
                 } else {
                     my $set = @media;
@@ -1393,7 +1393,7 @@ sub collectPackages {
     $prodsummary =~ s{\s+}{-}g; # replace space(s) by a single dash
     for my $n($this->getMediaNumbers()) {
         my $num = $n;
-        $num = 1 if seperateMedium($n);
+        $num = 1 if $this->seperateMedium($n);
         my $productsfile =
             "$this->{m_basesubdir}->{$n}/media.$num/products";
         my $PRODUCT;
