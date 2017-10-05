@@ -1203,7 +1203,7 @@ sub seperateMedium {
     # the dependency solver need to tell if a package is not matching
     return 1 if $number == $this->{m_debugmedium};
 
-    return 1 if $this->{m_proddata}->getVar("SEPERATE_MEDIA") eq "true";
+    return 1 if $this->{m_proddata}->getVar("SEPARATE_MEDIA") eq "true";
 
     return 0;
 }
