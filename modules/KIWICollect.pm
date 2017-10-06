@@ -1370,7 +1370,22 @@ sub collectPackages {
         $support_fd -> close();
     }
 
-    # step 5: products file
+    # step 5: handle beta information
+    my $beta_version = $this->{m_proddata}->getOpt("BETA_VERSION");
+    my $readme_file = "$this->{m_basesubdir}->{'1'}/README.BETA";
+    if (defined($beta_version)) {
+        my $dist_string = $this->{m_proddata}->getVar("PRODUCT_SUMMARY")." ".${beta_version};
+        $dist_string = $this->{m_proddata}->getVar("PRODUCT_SUMMARY")." ".${beta_version};
+        $dist_string =~ s/\Q\/\E/\\\//g;
+        if (system("sed", "-i", "s/BETA_DIST_VERSION/$dist_string/", $readme_file) != 0) {
+            $this->logMsg('W', "Failed to replace beta version in README.BETA file!");
+        };
+    } elsif ( -e $readme_file ) {
+        $this->logMsg('I', "Dropping README.BETA file");
+        unlink($readme_file);
+    }
+
+    # step 6: products file
     $this->logMsg('I', "Creating products file in all media:");
     my $prodname    = $this->{m_proddata}->getVar("PRODUCT_NAME");
     my $prodsummary = $this->{m_proddata}->getVar("PRODUCT_SUMMARY");
@@ -1404,7 +1419,7 @@ sub collectPackages {
         close $PRODUCT;
     }
 
-    # step 6: write out the channel files based on the collected rpms
+    # step 7: write out the channel files based on the collected rpms
     for my $m (keys(%{$this->{m_reportLog}})) {
         my $medium = $this->{m_reportLog}->{$m};
         my $fd;
