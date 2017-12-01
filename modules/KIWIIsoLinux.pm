@@ -1081,9 +1081,9 @@ sub checkImage {
     my $check= $this -> {check};
     my $data;
     if (defined $this->{check}) {
-        $data = KIWIQX::qxx ("tagmedia --md5 --check --pad 150 $dest 2>&1");
+        $data = KIWIQX::qxx ("tagmedia --digest sha256 --check --pad 150 $dest 2>&1");
     } else {
-        $data = KIWIQX::qxx ("tagmedia --md5 $dest 2>&1");
+        $data = KIWIQX::qxx ("tagmedia --digest sha256 $dest 2>&1");
     }
     my $code = $? >> 8;
     if ($code != 0) {
