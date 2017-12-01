@@ -242,6 +242,20 @@ sub new {
     return $this;
 }
 
+sub block_size {
+    my $this  = shift;
+    my $filename  = shift;
+    if (! sysopen(fh,$filename,O_RDONLY) ) {
+        my $kiwi = $this->{kiwi};
+        $kiwi -> error  ("Cannot open file $filename: $!");
+        $kiwi -> failed ();
+        return -1;
+    }
+    my $size = (stat(fh))[7];
+    close(fh);
+    return ($size/512);
+}
+
 #==========================================
 # x86_64_legacy
 #------------------------------------------
@@ -294,7 +308,7 @@ sub x86_64_efi {
     my $loader= $base{$arch}{efi};
     $para.= " -eltorito-alt-boot";
     $para.= " -no-emul-boot";
-    $para.= " -boot-load-size 1";
+    $para.= " -boot-load-size ".$this->block_size($this->{source}."/".$loader);
     $para.= " -b $loader";
     $this -> {params} = $para;
     return $this;
@@ -312,7 +326,7 @@ sub ix86_efi {
     my $loader= $base{$arch}{efi};
     $para.= " -eltorito-alt-boot";
     $para.= " -no-emul-boot";
-    $para.= " -boot-load-size 1";
+    $para.= " -boot-load-size ".$this->block_size($this->{source}."/".$loader);
     $para.= " -b $loader";
     $this -> {params} = $para;
     return $this;
@@ -331,7 +345,7 @@ sub ia64_efi {
     my $sort  = $this -> createLegacySortFile ("ia64");
 
     $para.= " -no-emul-boot";
-    $para.= " -boot-load-size 1";
+    $para.= " -boot-load-size ".$this->block_size($this->{source}."/".$loader);
     $para.= " -sort $sort" if $sort;
     $para.= " -b $loader";
     $para.= " -c $boot/boot.catalog";
