@@ -2103,6 +2103,34 @@ sub collectProducts {
 sub createMetadata {
     my $this = shift;
 
+    my $make_listings = $this->{m_proddata}->getVar("MAKE_LISTINGS");
+    if (defined($make_listings) && $make_listings eq "true") {
+        $this->logMsg('I', "Running mk_changelog for base directory");
+        my $mk_cl = "/usr/bin/mk_changelog";
+        if(! (-f $mk_cl or -x $mk_cl)) {
+            my $msg = "[createMetadata] excutable `$mk_cl` not found. Maybe "
+                    . 'package `inst-source-utils` is not installed?';
+            $this->logMsg('E', $msg);
+            return;
+        }
+        my @data = qx($mk_cl $this->{m_basesubdir}->{'1'});
+        my $res = $? >> 8;
+        if($res == 0) {
+            $this->logMsg('I', "$mk_cl finished successfully.");
+        }
+        else {
+            $this->logMsg(
+                'E', "$mk_cl finished with errors: returncode was $res"
+            );
+        }
+        $this->logMsg('I', "[createMetadata] $mk_cl output:");
+        foreach(@data) {
+            chomp $_;
+            $this->logMsg('I', "\t$_");
+        }
+        @data = ();
+    }
+
     # retrieve a complete list of all loaded plugins
     my %plugins = $this->{m_metacreator}->getPluginList();
 
