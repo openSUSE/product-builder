@@ -1148,7 +1148,9 @@ sub setupPackageFiles {
                             # if they exist at all
                             my $suffix = "";
                             my $basename = $packName;
-                            for my $tsuffix (qw(32bit 64bit x86)) {
+                            # we used to have also x86 for ia64 compat packages, but meanwhile
+                            # real life -x86 packages exist
+                            for my $tsuffix (qw(32bit 64bit)) {
                                 next unless $packName =~ /^(.*)(-$tsuffix)$/;
                                 $basename = $1;
                                 $suffix = $2;
