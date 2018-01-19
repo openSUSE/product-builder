@@ -1156,13 +1156,13 @@ sub setupPackageFiles {
                                 $suffix = $2;
                                 last;
                             }
-                            $this->addDebugPackage( $srcname."-debuginfo".$suffix,
+                            $this->addDebugPackage( $srcname.$suffix."-debuginfo",
                                                     $arch, $packPointer);
                             $this->addDebugPackage(
                                 $srcname."-debugsource", $arch,
                                 $packPointer);
                                 $this->addDebugPackage(
-                                $basename."-debuginfo".$suffix,
+                                $basename.$suffix."-debuginfo",
                                 $arch, $packPointer) unless $srcname eq $basename;
                         }
                     }
