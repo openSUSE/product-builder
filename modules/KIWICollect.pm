@@ -2115,6 +2115,8 @@ sub createMetadata {
             $this->logMsg('E', $msg);
             return;
         }
+        # we have no suse/ subdir anymore
+        $ENV{'ROOT_ON_CD'} = ".";
         my @data = qx($mk_cl $this->{m_basesubdir}->{'1'});
         my $res = $? >> 8;
         if($res == 0) {
