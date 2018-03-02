@@ -43,7 +43,7 @@ Provides:       kiwi-packagemanager:instsource
 Requires:       build
 Requires:       inst-source-utils
 Requires:       product-builder-plugin
-Requires:       genisoimage
+Requires:       mkisofs
 Requires:       checkmedia
 %ifarch %ix86 x86_64
 Requires:       syslinux
