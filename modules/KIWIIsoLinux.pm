@@ -307,6 +307,7 @@ sub x86_64_efi {
     my $boot  = $base{$arch}{boot};
     my $loader= $base{$arch}{efi};
     $para.= " -eltorito-alt-boot";
+    $para.= " -eltorito-platform efi";
     $para.= " -no-emul-boot";
     $para.= " -boot-load-size ".$this->block_size($this->{source}."/".$loader);
     $para.= " -b $loader";
@@ -325,6 +326,7 @@ sub ix86_efi {
     my $boot  = $base{$arch}{boot};
     my $loader= $base{$arch}{efi};
     $para.= " -eltorito-alt-boot";
+    $para.= " -eltorito-platform efi";
     $para.= " -no-emul-boot";
     $para.= " -boot-load-size ".$this->block_size($this->{source}."/".$loader);
     $para.= " -b $loader";
@@ -487,6 +489,7 @@ sub addBootLive {
     #------------------------------------------
     if (($firmware ne 'bios') && (-e "$src/boot/$arch/efi")) {
         $para.= ' -eltorito-alt-boot ';
+        $para.= " -eltorito-platform efi";
         $para.= " -b boot/$arch/efi";
     }
     $para.= ' -no-emul-boot -joliet-long -hide glump -hide-joliet glump';
