@@ -61,7 +61,7 @@ To be used only for product medias for Leap 15 and SLE 15.
 
 %prep
 %setup -q
-%if 0%{?suse_version} == 1330 || 0%{?skelcd_compat}
+%if 0%{?skelcd_compat}
 %patch1 -p1
 %endif
 
