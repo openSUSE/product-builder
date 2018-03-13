@@ -158,8 +158,11 @@ sub new {
             if ($arch eq "ix86") {
                 $catalog[0] = "ix86_legacy";
             }
-            if ($arch =~ /ppc64|ppc64le/) {
+            if ($arch eq "ppc64") {
                 $catalog[0] = "ppc64_default";
+            }
+            if ($arch eq "ppc64le") {
+                $catalog[0] = "ppc64le_default";
             }
             if ($arch eq "s390") {
                 if (-d $source."/".$base{ix86}{boot}) {
@@ -417,6 +420,12 @@ sub ppc64_default {
     $para.= " -U";
     $this -> {params} = $para;
     return $this;
+}
+
+sub ppc64le_default {
+    my $this = shift;
+    my $arch = shift;
+    $this->ppc64_default($arch);
 }
 
 #==========================================
