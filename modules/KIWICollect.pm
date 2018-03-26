@@ -1593,9 +1593,20 @@ sub unpackMetapackages {
                             qx(cp -a $tmp/CD$_/* $this->{m_basesubdir}->{$_});
                             $this->logMsg('W', "Unpack from old legacy /CD$_ directory");
                         } elsif ($_ eq 1) {
-                            my $msg;
-                            $msg = "No /usr/lib/skelcd/CD1 directory in $packPointer->{localfile}";
-                            $this->logMsg('W', $msg);
+                            # Path /usr/lib/skelcd/NET has introduced in skelcd-installer-net-openSUSE for mini iso
+                            if (-d "$tmp/usr/lib/skelcd/NET"
+                                and defined $this->{m_basesubdir}->{$_}
+                            ) {
+                                qx(cp -a $tmp/usr/lib/skelcd/NET/* $this->{m_basesubdir}->{$_});
+                                # .treeinfo for virt-installer:
+                                qx(cp -a $tmp/usr/lib/skelcd/NET/.treeinfo $this->{m_basesubdir}->{$_}) if (-f "$tmp/usr/lib/skelcd/NET/.treeinfo");
+                                $this->logMsg('I', "Unpack NET");
+                                $packageFound = 1;
+                            } else {
+                                my $msg;
+                                $msg = "No /usr/lib/skelcd/CD1 directory in $packPointer->{localfile}";
+                                $this->logMsg('W', $msg);
+                            }
                         }
                     }
                     next ARCH if $packageFound;
