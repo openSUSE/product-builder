@@ -72,6 +72,7 @@ sub new {
         ppc
         ppc64
         ppc64le
+        riscv64
         s390
         s390x
         x86_64
