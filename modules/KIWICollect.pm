@@ -1270,8 +1270,11 @@ sub collectPackages {
                 $this->logMsg('E', "Cannot create file <$mediafile>");
                 return;
             }
+            my $medium_suffix = "";
+            $medium_suffix = "-DEBUG"  if $n gt 1 && $this->{m_debugmedium} == $n;
+            $medium_suffix = "-SOURCE" if $n gt 1 && $this->{m_srcmedium}   == $n;
             print $MEDIA "$manufacturer - ";
-            print $MEDIA "$medium_name\n";
+            print $MEDIA "$medium_name$medium_suffix\n";
             print $MEDIA $this->{m_proddata}->getVar("BUILD_ID", "0")."\n";
             if($num == 1) {
                 # some specialities for medium number 1: contains a line with
