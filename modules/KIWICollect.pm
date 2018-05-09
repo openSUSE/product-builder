@@ -806,19 +806,6 @@ sub mainTask {
                         . 'not be bootable';
                     $this->logMsg('W', $msg);
                 } else {
-                    my $firmware = 'bios';
-                    my $xmlFirmWare = $this->{m_xml}
-                        -> getImageType() -> getFirmwareType();
-                    if ($xmlFirmWare) {
-                        $firmware = $xmlFirmWare;
-                    }
-                    if ($firmware eq "efi" || $firmware eq "uefi") {
-                        my @archs = $this->{m_archlist}->headList();
-                        if (grep {"x86_64" eq $_} @archs) {
-                            $this->logMsg('I', "Add Live setup");
-                            $iso -> addBootLive();
-                        }
-                    }
                     $this->logMsg('I', "Boot methods called successfully");
                     $is_bootable = 1;
                 }

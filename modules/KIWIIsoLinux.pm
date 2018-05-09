@@ -448,65 +448,6 @@ sub aarch64_efi {
 }
 
 #==========================================
-# addBootLive
-#------------------------------------------
-sub addBootLive {
-    my $this    = shift;
-    my $size    = $this->{bootloadsize};
-    my $para    = $this->{params};
-    my $sort    = $this->{sortfile};
-    my $src     = $this->{source};
-    my $tmpdir  = $this->{tmpdir};
-    my $magicID = $this->{magicID};
-    my $xml     = $this->{xml};
-    my $firmware= 'efi';
-    my $arch;
-    if ($size) {
-        $size = ($size + 2047) >> 11 << 2;
-    }
-    if (! -f $sort) {
-        return;
-    }
-    if (-d "$src/boot/x86_64") {
-        $arch = 'x86_64';
-    } elsif (-d "$src/boot/i386") {
-        $arch = 'i386';
-    } else {
-        return;
-    }
-    #==========================================
-    # Lookup firmware setup
-    #------------------------------------------
-    if ($xml) {
-        my $type = $xml -> getImageType();
-        my $xmlFirmWare = $type -> getFirmwareType();
-        if ($xmlFirmWare) {
-            $firmware = $xmlFirmWare;
-        }
-    }
-    #==========================================
-    # update sort file
-    #------------------------------------------
-    KIWIQX::qxx ("echo $src/boot/$arch/efi 1000001 >> $sort");
-    #==========================================
-    # add end-of-header marker
-    #------------------------------------------
-    KIWIQX::qxx ("echo $magicID > $tmpdir/glump");
-    KIWIQX::qxx ("echo $tmpdir/glump 1000000 >> $sort");
-    #==========================================
-    # update parameter list
-    #------------------------------------------
-    if (($firmware ne 'bios') && (-e "$src/boot/$arch/efi")) {
-        $para.= ' -eltorito-alt-boot ';
-        $para.= " -eltorito-platform efi";
-        $para.= " -b boot/$arch/efi";
-    }
-    $para.= ' -no-emul-boot -joliet-long -hide glump -hide-joliet glump';
-    $this -> {params} = $para;
-    return $this;
-}
-
-#==========================================
 # callBootMethods
 #------------------------------------------
 sub callBootMethods {
