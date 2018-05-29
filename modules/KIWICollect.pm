@@ -2133,7 +2133,25 @@ sub createMetadata {
             chomp $_;
             $this->logMsg('I', "\t$_");
         }
-        @data = ();
+
+        # LISTINGS, aka ARCHIVES.gz
+        $this->logMsg('I', "Calling mk_listings:");
+        my $listings = "/usr/bin/mk_listings";
+        if(! (-f $listings or -x $listings)) {
+            my $msg = "[createMetadata] excutable `$listings` not found. "
+                . 'Maybe package `inst-source-utils` is not installed?';
+            $this->logMsg('E', $msg);
+            return;
+        }
+        my $cmd = "$listings ".$this->{m_basesubdir}->{'1'};
+        my @data = qx($cmd);
+        undef $cmd;
+        $this->logMsg('I', "[createMetadata] $listings output:");
+        for my $item (@data) {
+            chomp $item;
+            $this->logMsg('I', "\t$item");
+        }
+        @data = (); # clear list
     }
 
     # retrieve a complete list of all loaded plugins
