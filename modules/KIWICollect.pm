@@ -396,9 +396,8 @@ sub Init {
         $attr{source}    = $package -> getSourceLocation();
         $attr{script}    = $package -> getScriptPath();
         $attr{medium}    = $package -> getMediaID();
-        $metaPacks{$name} = \%attr;
+        push @{$this->{m_metaPacks}{$name}}, \%attr;
     }
-    %{$this->{m_metaPacks}}  = %metaPacks;
     if(!$this->{m_metaPacks}) {
         my $msg = 'KIWICollect::Init: getProductMetaPackages '
             . 'returned no information, no metadata specified.';
@@ -1494,15 +1493,15 @@ sub unpackMetapackages {
     my $this = shift @packlist;
     METAPACKAGE:
     for my $metapack(@packlist) {
-        my %packOptions = %{$this->{m_metaPacks}->{$metapack}};
+      for my $packOptions(@{$this->{m_metaPacks}->{$metapack}}) {
         my $poolPackages = $this->{m_packagePool}->{$metapack};
         my $medium = 1;
         my $nokeep = 0;
-        if (defined($packOptions{'medium'})) {
-            if($packOptions{'medium'} == 0) {
+        if (defined($packOptions->{'medium'})) {
+            if($packOptions->{'medium'} == 0) {
                 $nokeep = 1;
             } else {
-                $medium = $packOptions{'medium'};
+                $medium = $packOptions->{'medium'};
             }
         }
         # regular handling: unpack, put everything from CD1..CD<n> to
@@ -1516,16 +1515,17 @@ sub unpackMetapackages {
             return 1;
         }
         my $nofallback = 0;
+
         ARCH:
         for my $reqArch (
             $this->getArchList(
-                $this->{m_metaPacks}->{$metapack}, $metapack, \$nofallback
+                $packOptions, $metapack, \$nofallback
             )
         ) {
             if ($reqArch =~ m{(src|nosrc)}) {
                 next;
             }
-            if (defined($packOptions{$reqArch})) {
+            if (defined($packOptions->{$reqArch})) {
                 next;
             }
             my @fallbacklist;
@@ -1614,6 +1614,7 @@ sub unpackMetapackages {
              }
           }
         }
+      }
     }
     # cleanup old files:
     for my $index($this->getMediaNumbers()) {
