@@ -77,9 +77,8 @@ make buildroot="%{buildroot}" \
 ./.version >"%{buildroot}/%{_datadir}/kiwi/.revision"
 
 %files
-%defattr(-, root, root)
 %dir %{_datadir}/kiwi
-%doc LICENSE
+%license LICENSE
 %{_datadir}/kiwi/.revision
 %{_datadir}/kiwi/metadata
 %{_datadir}/kiwi/modules
