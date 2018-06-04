@@ -430,7 +430,21 @@ sub ppc64_default {
 sub ppc64le_default {
     my $this = shift;
     my $arch = shift;
-    $this->ppc64_default($arch);
+
+    my %base  = %{$this->{base}};
+    my $para  = $this -> {params};
+    my $src   = $this -> {source};
+    my $boot  = $base{$arch}{boot};
+    my $volid = $this -> createVolumeID();
+
+    $para.= " -chrp-boot";
+    $para.= " -hfs-bless $src/$boot/grub2-ieee1275";
+    $para.= " -hfs-volid '$volid'";
+    $para.= " -l";
+    $para.= " -part";
+    $para.= " -U";
+    $this -> {params} = $para;
+    return $this;
 }
 
 #==========================================
