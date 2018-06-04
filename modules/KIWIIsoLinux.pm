@@ -309,6 +309,10 @@ sub x86_64_efi {
     my $para  = $this -> {params};
     my $boot  = $base{$arch}{boot};
     my $loader= $base{$arch}{efi};
+    my $sort  = $this -> createLegacySortFile ("x86_64");
+    my $src   = $this -> {source};
+    KIWIQX::qxx ("echo $src/boot/$arch/efi 1000001 >> $sort");
+    $para.= " -sort $sort" if $sort;
     $para.= " -eltorito-alt-boot";
     $para.= " -eltorito-platform efi";
     $para.= " -no-emul-boot";
@@ -328,6 +332,7 @@ sub ix86_efi {
     my $para  = $this -> {params};
     my $boot  = $base{$arch}{boot};
     my $loader= $base{$arch}{efi};
+
     $para.= " -eltorito-alt-boot";
     $para.= " -eltorito-platform efi";
     $para.= " -no-emul-boot";
