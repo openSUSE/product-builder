@@ -23,12 +23,10 @@ Url:            http://github.com/openSUSE/product-builder
 Name:           product-builder
 Conflicts:      kiwi
 Conflicts:      kiwi-instsource
-Version:        1.0.7
+Version:        1.1.1
 Release:        0
 Provides:       kiwi-schema = 6.2
 Source:         product-builder-%version.tar.xz
-# temporary hack for openSUSE:Factory only
-Patch1:         accept_old_meta_package.patch
 
 Requires:       libxslt
 Requires:       perl >= %{perl_version}
@@ -61,9 +59,6 @@ To be used only for product medias for Leap 15 and SLE 15.
 
 %prep
 %setup -q
-%if 0%{?skelcd_compat}
-%patch1 -p1
-%endif
 
 %build
 test -e /.buildenv && . /.buildenv
