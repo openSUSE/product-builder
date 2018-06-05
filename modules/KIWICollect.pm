@@ -401,8 +401,7 @@ sub Init {
     if(!$this->{m_metaPacks}) {
         my $msg = 'KIWICollect::Init: getProductMetaPackages '
             . 'returned no information, no metadata specified.';
-        $this->logMsg('E', $msg);
-        return;
+        $this->logMsg('I', $msg);
     } else {
         $this->logMsg('I', "KIWICollect::Init: retrieved metapackage list.");
         if($this->{m_debug}) {
@@ -1493,7 +1492,7 @@ sub unpackMetapackages {
     my $this = shift @packlist;
     METAPACKAGE:
     for my $metapack(@packlist) {
-      for my $packOptions(@{$this->{m_metaPacks}->{$metapack}}) {
+      for my $packOptions(@{$this->{m_metaPacks}->{$metapack}||[]}) {
         my $poolPackages = $this->{m_packagePool}->{$metapack};
         my $medium = 1;
         my $nokeep = 0;
