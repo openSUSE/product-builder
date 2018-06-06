@@ -307,11 +307,17 @@ sub x86_64_efi {
     my $arch  = shift;
     my %base  = %{$this->{base}};
     my $para  = $this -> {params};
+    my $magicID= $this -> {magicID};
     my $boot  = $base{$arch}{boot};
     my $loader= $base{$arch}{efi};
     my $sort  = $this -> createLegacySortFile ("x86_64");
     my $src   = $this -> {source};
     KIWIQX::qxx ("echo $src/boot/$arch/efi 1000001 >> $sort");
+    #==========================================
+    # add end-of-header marker
+    #------------------------------------------
+    KIWIQX::qxx ("echo $magicID > ".$this->{tmpdir}."/glump");
+    KIWIQX::qxx ("echo ".$this->{tmpdir}."/glump 1000000 >> $sort") if $sort;
     $para.= " -sort $sort" if $sort;
     $para.= " -eltorito-alt-boot";
     $para.= " -eltorito-platform efi";
