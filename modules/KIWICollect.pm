@@ -792,6 +792,12 @@ sub mainTask {
             ) {
                 $hybridmedia = 1 ;
             }
+            my $rpihybridmedia;
+            if ( defined($this->{m_proddata}->getVar("RUN_RPIHYBRID"))
+                && $this->{m_proddata}->getVar("RUN_RPIHYBRID") eq "true"
+            ) {
+                $rpihybridmedia = 1 ;
+            }
             $iso = KIWIIsoLinux -> new(
                 $this->{m_basesubdir}->{$cd},
                 $isoname, $attr, $checkmedia, $this->{cmdL}, $this->{m_xml}
@@ -826,6 +832,13 @@ sub mainTask {
                         $this->logMsg('W', "Isohybrid call failed");
                     } else {
                         $this->logMsg('I', "Isohybrid call successful");
+                    }
+                }
+                if ($rpihybridmedia) {
+                    if(!$iso->createRPiHybrid()) {
+                        $this->logMsg('W', "Failed to create RPi Hybrid ISO");
+                    } else {
+                        $this->logMsg('I', "Successfully created RPi Hybrid ISO");
                     }
                 }
             }
