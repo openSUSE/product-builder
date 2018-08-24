@@ -787,16 +787,10 @@ sub mainTask {
                 $checkmedia = "checkmedia";
             }
             my $hybridmedia;
-            if ( defined($this->{m_proddata}->getVar("RUN_ISOHYBRID"))
-                && $this->{m_proddata}->getVar("RUN_ISOHYBRID") eq "true"
-            ) {
-                $hybridmedia = 1 ;
-            }
             my $rpihybridmedia;
-            if ( defined($this->{m_proddata}->getVar("RUN_RPIHYBRID"))
-                && $this->{m_proddata}->getVar("RUN_RPIHYBRID") eq "true"
-            ) {
-                $rpihybridmedia = 1 ;
+            if (defined($this->{m_proddata}->getVar("RUN_ISOHYBRID"))) {
+                $hybridmedia = 1 if $this->{m_proddata}->getVar("RUN_ISOHYBRID") eq "true";
+                $rpihybridmedia = 1 if $this->{m_proddata}->getVar("RUN_ISOHYBRID") eq "rpi"
             }
             $iso = KIWIIsoLinux -> new(
                 $this->{m_basesubdir}->{$cd},
