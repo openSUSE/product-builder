@@ -461,8 +461,18 @@ sub aarch64_efi {
     my $arch  = shift;
     my %base  = %{$this->{base}};
     my $para  = $this -> {params};
+    my $magicID= $this -> {magicID};
     my $boot  = $base{$arch}{boot};
     my $loader= $base{$arch}{efi};
+    my $sort  = $this -> createLegacySortFile ("aarch64");
+    my $src   = $this -> {source};
+    KIWIQX::qxx ("echo $src/boot/$arch/efi 1000001 >> $sort");
+    #==========================================
+    # add end-of-header marker
+    #------------------------------------------
+    KIWIQX::qxx ("echo $magicID > ".$this->{tmpdir}."/glump");
+    KIWIQX::qxx ("echo ".$this->{tmpdir}."/glump 1000000 >> $sort") if $sort;
+    $para.= " -sort $sort" if $sort;
     $para.= " -no-emul-boot";
     # do not add -boot-load-size 1 here
     $para.= " -b $loader";
@@ -521,7 +531,9 @@ sub createLegacySortFile {
         $this -> cleanISO();
         return;
     }
-    find ({wanted => $wref,follow => 0 },$src."/".$base{$arch}{boot}."/loader");
+    if ($arch ne "aarch64") {
+        find ({wanted => $wref,follow => 0 },$src."/".$base{$arch}{boot}."/loader");
+    }
     print $FD "$ldir/".$base{$arch}{boot}."/boot.catalog 3"."\n";
     print $FD $base{$arch}{boot}."/boot.catalog 3"."\n";
     print $FD "$src/".$base{$arch}{boot}."/boot.catalog 3"."\n";
@@ -1166,6 +1178,69 @@ sub createHybrid {
         $kiwi -> failed ();
         return;
     }
+    return $this;
+}
+
+#==========================================
+# createRPiHybrid
+#------------------------------------------
+sub createRPiHybrid {
+    # ...
+    # create hybrid ISO that only injects MBR awareness,
+    # but without using the isohybrid tool. This is needed
+    # to directly boot the iso on a Raspberry Pi.
+    # ---
+    my $this     = shift;
+    my $mbrid    = shift;
+    my $kiwi     = $this->{kiwi};
+    my $iso      = $this->{dest};
+    my $xml      = $this->{xml};
+    my $data;
+    my $code;
+    my $mbr;
+    my $iso_fd = FileHandle -> new();
+
+    if (! $iso_fd -> open("+<".$iso)) {
+        $kiwi -> error ("Can not open hybrid iso");
+        $kiwi -> failed ();
+        return;
+    }
+
+    # Create MBR
+    my $bootcode = pack("a446", "");
+    my $empty_part = pack("a16", "");
+
+    my $iso_start = $this->{magic_offset};
+    my $iso_size = (sysseek($iso_fd, 0, 2) / 512) - $iso_start;
+    my $iso_part = pack("C8VV", 0, 0xff, 0xff, 0xff, 0x83, 0xff, 0xff, 0xff, $iso_start, $iso_size);
+
+    my $efi_start = hex(KIWIQX::qxx("echo -n `isoinfo -d -i $iso | grep Bootoff | cut -d f -f 3 | cut -d ' ' -f 2`")) * 4;
+    my $efi_size = hex(KIWIQX::qxx("echo -n `isoinfo -d -i $iso | grep Nsect | cut -d t -f 2 | sed 's/ //g'`"));
+    my $efi_part = pack("C8VV", 0x80, 0xff, 0xff, 0xff, 0xc, 0xff, 0xff, 0xff, $efi_start, $efi_size);
+
+    if (!$efi_start || !$efi_size) {
+        $kiwi -> error ("Can not parse el torito information on hybrid iso");
+        $kiwi -> failed ();
+        return;
+    }
+
+    $mbr = pack("a446", "");
+    $mbr .= $efi_part;
+    $mbr .= $iso_part;
+    $mbr .= $empty_part;
+    $mbr .= $empty_part;
+    $mbr .= pack("C2", 0x55, 0xaa);
+
+    # Write MBR into iso
+    sysseek $iso_fd, 0, 0;
+    if (! syswrite($iso_fd, $mbr, 512) == 512) {
+        $kiwi -> error ("Can not write iso MBR");
+        $kiwi -> failed ();
+        return;
+    }
+
+    $iso_fd  -> close();
+
     return $this;
 }
 
