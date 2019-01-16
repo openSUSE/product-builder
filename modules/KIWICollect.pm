@@ -751,96 +751,96 @@ sub mainTask {
             "Module KIWIIsoLinux not loadable: $@"
         );
         return 1;
-    } else {
-        my $iso;
-        for my $cd ($this->getMediaNumbers()) {
-            if ( $cd == 0 ) {
-                next;
-            }
-            ( my $name = $this->{m_basesubdir}->{$cd} ) =~ s{.*/(.*)/*$}{$1};
-            my $isoname = $this->{m_united}."/$name.iso";
-            # construct volume id, no longer than 32 bytes allowed
-            my $volid_maxlen = 32;
-            my $vname = $name;
-            $vname =~ s/-Media//;
-            $vname =~ s/-Build// if length($vname) > ($volid_maxlen - 4);
-            my $vid = substr($vname,0,($volid_maxlen));
-            if ($this->{m_proddata}->getVar("MULTIPLE_MEDIA", "true") eq "true") {
-                $vid = sprintf(
-                    "%s.%03d",
-                    substr($vname,0,($volid_maxlen - 4)), $cd
-                );
-            }
-            my $attr = "-r"; # RockRidge
-            $attr .= " -pad"; # pad image by 150 sectors - needed for Linux
-            $attr .= " -f"; # follow symlinks - really necessary?
-            $attr .= " -J"; # Joilet extensions - only useful for i586/x86_64,
-            $attr .= " -joliet-long"; # longer filenames for joilet filenames
-            $attr .= " -p \"$this->{gdata}->{Preparer}\"";
-            $attr .= " -publisher \"$this->{gdata}->{Publisher}\"";
-            $attr .= " -A \"$name\"";
-            $attr .= " -V \"$vid\"";
-            my $checkmedia = '';
-            if ( defined($this->{m_proddata}->getVar("RUN_MEDIA_CHECK"))
-                && $this->{m_proddata}->getVar("RUN_MEDIA_CHECK") ne "false"
-            ) {
-                $checkmedia = "checkmedia";
-            }
-            my $hybridmedia;
-            if (defined($this->{m_proddata}->getVar("RUN_ISOHYBRID"))) {
-                $hybridmedia = 1 if $this->{m_proddata}->getVar("RUN_ISOHYBRID") eq "true";
-            }
-            $iso = KIWIIsoLinux -> new(
-                $this->{m_basesubdir}->{$cd},
-                $isoname, $attr, $checkmedia, $this->{cmdL}, $this->{m_xml}
+    }
+
+    my $iso;
+    for my $cd ($this->getMediaNumbers()) {
+        if ( $cd == 0 ) {
+            next;
+        }
+        ( my $name = $this->{m_basesubdir}->{$cd} ) =~ s{.*/(.*)/*$}{$1};
+        my $isoname = $this->{m_united}."/$name.iso";
+        # construct volume id, no longer than 32 bytes allowed
+        my $volid_maxlen = 32;
+        my $vname = $name;
+        $vname =~ s/-Media//;
+        $vname =~ s/-Build// if length($vname) > ($volid_maxlen - 4);
+        my $vid = substr($vname,0,($volid_maxlen));
+        if ($this->{m_proddata}->getVar("MULTIPLE_MEDIA", "true") eq "true") {
+            $vid = sprintf(
+                "%s.%03d",
+                substr($vname,0,($volid_maxlen - 4)), $cd
             );
-            # Just the first media is usually bootable at SUSE
-            my $is_bootable = 0;
-            if(-d "$this->{m_basesubdir}->{$cd}/boot") {
-                if(!$iso->callBootMethods()) {
-                    my $msg = 'Creating boot methods failed, medium maybe '
-                        . 'not be bootable';
-                    $this->logMsg('W', $msg);
+        }
+        my $attr = "-r"; # RockRidge
+        $attr .= " -pad"; # pad image by 150 sectors - needed for Linux
+        $attr .= " -f"; # follow symlinks - really necessary?
+        $attr .= " -J"; # Joilet extensions - only useful for i586/x86_64,
+        $attr .= " -joliet-long"; # longer filenames for joilet filenames
+        $attr .= " -p \"$this->{gdata}->{Preparer}\"";
+        $attr .= " -publisher \"$this->{gdata}->{Publisher}\"";
+        $attr .= " -A \"$name\"";
+        $attr .= " -V \"$vid\"";
+        my $checkmedia = '';
+        if ( defined($this->{m_proddata}->getVar("RUN_MEDIA_CHECK"))
+            && $this->{m_proddata}->getVar("RUN_MEDIA_CHECK") ne "false"
+        ) {
+            $checkmedia = "checkmedia";
+        }
+        my $hybridmedia;
+        if (defined($this->{m_proddata}->getVar("RUN_ISOHYBRID"))) {
+            $hybridmedia = 1 if $this->{m_proddata}->getVar("RUN_ISOHYBRID") eq "true";
+        }
+        $iso = KIWIIsoLinux -> new(
+            $this->{m_basesubdir}->{$cd},
+            $isoname, $attr, $checkmedia, $this->{cmdL}, $this->{m_xml}
+        );
+        # Just the first media is usually bootable at SUSE
+        my $is_bootable = 0;
+        if(-d "$this->{m_basesubdir}->{$cd}/boot") {
+            if(!$iso->callBootMethods()) {
+                my $msg = 'Creating boot methods failed, medium maybe '
+                    . 'not be bootable';
+                $this->logMsg('W', $msg);
+            } else {
+                $this->logMsg('I', "Boot methods called successfully");
+                $is_bootable = 1;
+            }
+        }
+        if(!$iso->createISO()) {
+            $this->logMsg('E', "Cannot create Iso image");
+            return 1;
+        } else {
+            $this->logMsg('I', "Created Iso image <$isoname>");
+        }
+        if ($is_bootable) {
+            if (! $iso->relocateCatalog()) {
+                return 1;
+            }
+            if (! $iso->fixCatalog()) {
+                return 1;
+            }
+            if ($hybridmedia) {
+                if(-d "$this->{m_basesubdir}->{$cd}/boot/aarch64") {
+                   if(!$iso->createRPiHybrid()) {
+                       $this->logMsg('W', "createRPiHybrid call failed");
+                   } else {
+                       $this->logMsg('I', "createRPiHybrid call successful");
+                   }
                 } else {
-                    $this->logMsg('I', "Boot methods called successfully");
-                    $is_bootable = 1;
+                   if(!$iso->createHybrid()) {
+                       $this->logMsg('W', "Isohybrid call failed");
+                   } else {
+                       $this->logMsg('I', "Isohybrid call successful");
+                   }
                 }
             }
-            if(!$iso->createISO()) {
-                $this->logMsg('E', "Cannot create Iso image");
-                return 1;
-            } else {
-                $this->logMsg('I', "Created Iso image <$isoname>");
-            }
-            if ($is_bootable) {
-                if (! $iso->relocateCatalog()) {
-                    return 1;
-                }
-                if (! $iso->fixCatalog()) {
-                    return 1;
-                }
-                if ($hybridmedia) {
-                    if(-d "$this->{m_basesubdir}->{$cd}/boot/aarch64") {
-                       if(!$iso->createRPiHybrid()) {
-                           $this->logMsg('W', "createRPiHybrid call failed");
-                       } else {
-                           $this->logMsg('I', "createRPiHybrid call successful");
-                       }
-                    } else {
-                       if(!$iso->createHybrid()) {
-                           $this->logMsg('W', "Isohybrid call failed");
-                       } else {
-                           $this->logMsg('I', "Isohybrid call successful");
-                       }
-                    }
-                }
-            }
-            if(!$iso->checkImage()) {
-                $this->logMsg('E', "Tagmedia call failed");
-                return 1;
-            } else {
-                $this->logMsg('I', "Tagmedia call successful");
-            }
+        }
+        if(!$iso->checkImage()) {
+            $this->logMsg('E', "Tagmedia call failed");
+            return 1;
+        } else {
+            $this->logMsg('I', "Tagmedia call successful");
         }
     }
     return 0;
