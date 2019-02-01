@@ -21,7 +21,7 @@ cat > .kiwirc << EOF
 EOF
 fi
 
-./product-builder.pl $@
+./product-builder.pl "$@"
 ecode=$?
 
 popd $callpath &>/dev/null
