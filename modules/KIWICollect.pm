@@ -1478,6 +1478,9 @@ sub addToTrackFile {
             $pkg->{localfile}, length($pkg->{repo}->{source})
         )
     );
+    if (defined($pkg->{cpeid}) && $pkg->{cpeid} ne "") {
+        $hash{"cpeid"} = $pkg->{cpeid};
+    }
     if (defined($pkg->{epoch}) && $pkg->{epoch} ne "") {
         $hash{"epoch"} = $pkg->{epoch};
     }
@@ -1826,7 +1829,6 @@ sub lookUpAllPackages {
                         $store = {};
                         $packPool->{$name} = $store;
                     }
-                    $store->{$repokey} = $package;
 		    # look for products defined inside
 		    RPMQ::rpmq_add_flagsvers(\%flags, 'PROVIDENAME', 'PROVIDEFLAGS', 'PROVIDEVERSION');
                     for my $provide (@{$flags{'PROVIDENAME'} || []}) {
@@ -1834,7 +1836,12 @@ sub lookUpAllPackages {
                             $this->logMsg('I', "Found product provides for $1");
 		            push @$productList, $1;
 		        }
+			if ($provide =~ /^product-cpeid\(\) = (.+)$/) {
+                            $this->logMsg('I', "Found cpeid provides for $1");
+                            $package->{'cpeid'} = $1;
+		        }
                     }
+                    $store->{$repokey} = $package;
                     $retval++;
                 } # read RPM header
             } # foreach URI
