@@ -1837,8 +1837,9 @@ sub lookUpAllPackages {
 		            push @$productList, $1;
 		        }
 			if ($provide =~ /^product-cpeid\(\) = (.+)$/) {
-                            $this->logMsg('I', "Found cpeid provides for $1");
                             $package->{'cpeid'} = $1;
+                            $package->{'cpeid'} =~ s/%([a-fA-F0-9]{2})/chr(hex($1))/sge;
+                            $this->logMsg('I', "Found cpeid provides for $package->{'cpeid'}");
 		        }
                     }
                     $store->{$repokey} = $package;
