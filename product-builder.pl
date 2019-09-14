@@ -286,10 +286,11 @@ sub quit {
 #------------------------------------------
 sub revision {
     my $gdata = $global -> getKiwiConfig();
-    my $rev  = "unknown";
+    my $rev;
     if (open my $FD,'<',$gdata->{Revision}) {
         $rev = <$FD>; close $FD;
     }
+    $rev ||= "unknown";
     chomp $rev;
     return $rev;
 }
