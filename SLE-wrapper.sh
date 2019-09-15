@@ -39,10 +39,7 @@ case "$BUILD_FLAVOR" in
     done # kiwiconf
 
     # now the final ISO
-    kiwi=$BUILD_FLAVOR.kiwi
-    
-    # erase the wildcard package, we only need it in the product so the worker pulls full tree
-    grep -v 'repopackage name="\*"' $kiwi > config.xml
+    perl -e '$in=0; while (<STDIN>) { $in=0 if m,</repopackages,; print $_ unless $in; $in=1 if m,<repopackages,; }' < SLES-cd-Packages-DVD-x86_64.kiwi  > config.xml
     ;;
 esac
 
