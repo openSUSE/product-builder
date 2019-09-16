@@ -2222,7 +2222,7 @@ sub createMetadata {
             return;
         }
         my $cmd = "$listings ".$this->{m_basesubdir}->{'1'};
-        my @data = qx($cmd);
+        @data = qx($cmd);
         undef $cmd;
         $this->logMsg('I', "[createMetadata] $listings output:");
         for my $item (@data) {

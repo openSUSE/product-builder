@@ -248,14 +248,15 @@ sub new {
 sub block_size {
     my $this  = shift;
     my $filename  = shift;
-    if (! sysopen(fh,$filename,O_RDONLY) ) {
+    my $fh;
+    if (! sysopen($fh,$filename,O_RDONLY) ) {
         my $kiwi = $this->{kiwi};
         $kiwi -> error  ("Cannot open file $filename: $!");
         $kiwi -> failed ();
         return -1;
     }
-    my $size = (stat(fh))[7];
-    close(fh);
+    my $size = (stat($fh))[7];
+    close($fh);
     return ($size/512);
 }
 
