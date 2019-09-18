@@ -39,7 +39,7 @@ case "$BUILD_FLAVOR" in
     done # kiwiconf
 
     # now the final ISO
-    perl -e '$in=0; while (<STDIN>) { $in=0 if m,</repopackages,; print $_ unless $in; $in=1 if m,<repopackages,; }' < SLES-cd-Packages-DVD-x86_64.kiwi  > config.xml
+    perl -e '$in=0; while (<STDIN>) { $in=0 if m,</repopackages,; print $_ unless $in; $in=1 if m,<repopackages,; }' < $BUILD_FLAVOR.kiwi  > config.xml
     ;;
 esac
 
