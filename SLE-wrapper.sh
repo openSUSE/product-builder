@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# wrapper around product builder to call itself recursive for SLE Packages DVD
+# wrapper around product builder to call itself recursive for SLE Full image
 
 set -xe
 
 case "$BUILD_FLAVOR" in
-  SLES-cd-Packages-DVD-*)
+  SLES-cd-Full-*)
     TOPDIR=/usr/src/packages/
     cd $TOPDIR/SOURCES/ || exit 1
     mkdir $TOPDIR/KIWIRESULTS
@@ -13,7 +13,7 @@ case "$BUILD_FLAVOR" in
     # remove symlink, we cat into it
     rm config.xml
 
-    ARCH=${BUILD_FLAVOR/SLES-cd-Packages-DVD-}
+    ARCH=${BUILD_FLAVOR/SLES-cd-Full-}
     # the worker expands obsrepositories:// only in the target kiwi so we need to apply this change to the modules
     perl -e '$in=0; while (<STDIN>) { $in=1 if /<instrepo /; print $_ if $in; $in=0 if m,</instrepo,; }' < $BUILD_FLAVOR.kiwi > expanded_instsources.include
 
