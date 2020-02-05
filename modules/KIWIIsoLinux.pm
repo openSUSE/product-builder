@@ -319,6 +319,7 @@ sub x86_64_efi {
     #------------------------------------------
     KIWIQX::qxx ("echo $magicID > ".$this->{tmpdir}."/glump");
     KIWIQX::qxx ("echo ".$this->{tmpdir}."/glump 1000000 >> $sort") if $sort;
+    $para.= " -hide glump -hide-joliet glump";
     $para.= " -sort $sort" if $sort;
     $para.= " -eltorito-alt-boot";
     $para.= " -eltorito-platform efi";
@@ -473,6 +474,7 @@ sub aarch64_efi {
     #------------------------------------------
     KIWIQX::qxx ("echo $magicID > ".$this->{tmpdir}."/glump");
     KIWIQX::qxx ("echo ".$this->{tmpdir}."/glump 1000000 >> $sort") if $sort;
+    $para.= " -hide glump -hide-joliet glump";
     $para.= " -sort $sort" if $sort;
     $para.= " -no-emul-boot";
     # do not add -boot-load-size 1 here
@@ -882,7 +884,6 @@ sub createISO {
     my $cmdL     = $this -> {cmdL};
     my $xml      = $this -> {xml};
     my $magicID  = $this -> {magicID};
-    my $addpara  = "-hide glump -hide-joliet glump";
     my $firmware = 'efi';
     my $ldir_cnt = 0;
     my %type;
@@ -952,9 +953,9 @@ sub createISO {
             return;
         }
         if ($this -> isEmptyDir ($ldir)) {
-            $cmdln = "$prog $para $addpara -o $dest $src 2>&1";
+            $cmdln = "$prog $para -o $dest $src 2>&1";
         } else {
-            $cmdln = "$prog $para $addpara -o $dest $ldir $src 2>&1";
+            $cmdln = "$prog $para -o $dest $ldir $src 2>&1";
         }
         $data = KIWIQX::qxx ( $cmdln );
         $code = $? >> 8;
