@@ -11,7 +11,7 @@ case "$BUILD_FLAVOR" in
     mkdir $TOPDIR/KIWIRESULTS
 
     # remove symlink, we cat into it
-    rm config.xml
+    rm -f config.xml config.kiwi
 
     ARCH=${BUILD_FLAVOR/SLES-cd-Full-}
     # the worker expands obsrepositories:// only in the target kiwi so we need to apply this change to the modules
@@ -30,8 +30,11 @@ case "$BUILD_FLAVOR" in
       grep -qx $MN_SHORT packages-dvd.txt || continue
 
       # replace obsrepositories://
-      perl -e '$in=0; while (<STDIN>) { $in=1 if /<instrepo /; print $_ unless $in; if (m,</instrepo,) { $in=0; system("cat expanded_instsources.include") }; }' < $kiwi > config.xml
-      sed -i "s,MEDIUM_NAME\">.*,MEDIUM_NAME\">$MN-$BUILD_SUFFIX-Media</productvar><productvar name=\"BUILD_ID\">$MN-$BUILD_SUFFIX</productvar>," config.xml
+      perl -e '$in=0; while (<STDIN>) { $in=1 if /<instrepo /; print $_ unless $in; if (m,</instrepo,) { $in=0; system("cat expanded_instsources.include") }; }' < $kiwi > config.kiwi
+      sed -i "s,MEDIUM_NAME\">.*,MEDIUM_NAME\">$MN-$BUILD_SUFFIX-Media</productvar><productvar name=\"BUILD_ID\">$MN-$BUILD_SUFFIX</productvar>," config.kiwi
+
+      # rescue support flags
+      cp ${kiwi%.kiwi}.kwd config.kwd
 
       /usr/bin/product-builder.pl --root $TOPDIR/KIWIROOT/ -v 1 --logfile terminal --create-instsource . || exit 1
       mv $TOPDIR/KIWIROOT/main $TOPDIR/KIWIALL/$MN_SHORT
@@ -39,7 +42,7 @@ case "$BUILD_FLAVOR" in
     done # kiwiconf
 
     # now the final ISO
-    perl -e '$in=0; while (<STDIN>) { $in=0 if m,</repopackages,; print $_ unless $in; $in=1 if m,<repopackages,; }' < $BUILD_FLAVOR.kiwi  > config.xml
+    perl -e '$in=0; while (<STDIN>) { $in=0 if m,</repopackages,; print $_ unless $in; $in=1 if m,<repopackages,; }' < $BUILD_FLAVOR.kiwi  > config.kiwi
     ;;
 esac
 
