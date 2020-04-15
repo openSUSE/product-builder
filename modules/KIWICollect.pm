@@ -1349,6 +1349,7 @@ sub collectPackages {
     my %supporthash;
     my $supportfile = abs_path($this->{m_xml}->{xmlOrigFile});
     $supportfile =~ s/.kiwi$/.kwd/;
+    $supportfile =~ s/.xml$/.kwd/;
     if ( -e $supportfile ) {
         my $support_fd = FileHandle -> new();
         if (! $support_fd -> open ($supportfile)) {
