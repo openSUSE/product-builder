@@ -2261,7 +2261,10 @@ sub createMetadata {
     foreach my $order(sort {$a <=> $b} keys(%{$this->{m_metacreator}->{m_handlers}})) {
         if($this->{m_metacreator}->{m_handlers}->{$order}->ready()) {
             $this->logMsg('I', "Execute plugin ".$this->{m_metacreator}->{m_handlers}->{$order}->name()." order $order");
-            $this->{m_metacreator}->{m_handlers}->{$order}->execute();
+            if ($this->{m_metacreator}->{m_handlers}->{$order}->execute()) {
+              $this->logMsg('E', 'Plugin failed!');
+              return;
+            }
         } else {
             $this->logMsg(
                 "W", "Plugin ".$this->{m_metacreator}->{m_handlers}->{$order}->name()." is not activated yet!"
