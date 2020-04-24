@@ -445,7 +445,7 @@ sub ppc64le_default {
     my $boot  = $base{$arch}{boot};
     my $volid = $this -> createVolumeID();
 
-#    $para.= " -chrp-boot"; # should not be needed anymore
+    $para.= " -chrp-boot";
     $para.= " -hfs-bless $src/$boot/grub2-ieee1275";
     $para.= " -hfs-volid '$volid'";
     $para.= " -l";
