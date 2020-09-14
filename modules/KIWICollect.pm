@@ -1475,6 +1475,7 @@ sub addToTrackFile {
         "binaryarch" => $pkg->{arch},
         "buildtime"  => $pkg->{buildtime},
         "disturl"    => $pkg->{disturl},
+        "license"    => $pkg->{license},
         "localfile"  => $pkg->{repo}->{origin}.substr(
             $pkg->{localfile}, length($pkg->{repo}->{source})
         )
@@ -1814,6 +1815,7 @@ sub lookUpAllPackages {
                     'NOSOURCE',
                     'NOPATCH',
                     'DISTURL',
+                    'LICENSE',
                     'BUILDTIME',
                     'PROVIDENAME',
                     'PROVIDEVERSION',
@@ -1845,6 +1847,7 @@ sub lookUpAllPackages {
                     $package->{'repo'} = $this->{m_repos}->{$r};
                     $package->{'localfile'} = $uri;
                     $package->{'disturl'} = $flags{'DISTURL'}[0];
+                    $package->{'license'} = $flags{'LICENSE'}[0];
                     $package->{'epoch'} = $flags{'EPOCH'}[0];
                     $package->{'version'} = $flags{'VERSION'}[0];
                     $package->{'release'} = $flags{'RELEASE'}[0];
