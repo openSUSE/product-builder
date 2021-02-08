@@ -147,6 +147,10 @@ sub new {
     $base{aarch64}{boot}    = "boot/aarch64";
     $base{aarch64}{loader}  = "undef";
     $base{aarch64}{efi}     = "boot/aarch64/efi";
+    # riscv64
+    $base{riscv64}{boot}    = "boot/riscv64";
+    $base{riscv64}{loader}  = "undef";
+    $base{riscv64}{efi}     = "boot/riscv64/efi";
     #=======================================
     # 1) search for legacy boot
     #---------------------------------------
@@ -200,6 +204,9 @@ sub new {
             }
             if ($arch eq "aarch64") {
                 push (@catalog, "aarch64_efi");
+            }
+            if ($arch eq "riscv64") {
+                push (@catalog, "riscv64_efi");
             }
         }
     }
@@ -486,6 +493,35 @@ sub aarch64_efi {
 }
 
 #==========================================
+# riscv64_efi
+#------------------------------------------
+sub riscv64_efi {
+    my $this  = shift;
+    my $arch  = shift;
+    my %base  = %{$this->{base}};
+    my $para  = $this -> {params};
+    my $magicID= $this -> {magicID};
+    my $boot  = $base{$arch}{boot};
+    my $loader= $base{$arch}{efi};
+    my $sort  = $this -> createLegacySortFile ("riscv64");
+    my $src   = $this -> {source};
+    KIWIQX::qxx ("echo $src/boot/$arch/efi 1000001 >> $sort");
+    #==========================================
+    # add end-of-header marker
+    #------------------------------------------
+    KIWIQX::qxx ("echo $magicID > ".$this->{tmpdir}."/glump");
+    KIWIQX::qxx ("echo ".$this->{tmpdir}."/glump 1000000 >> $sort") if $sort;
+    $para.= " -sort $sort" if $sort;
+    $para.= " -no-emul-boot";
+    # do not add -boot-load-size 1 here
+    $para.= " -b $loader";
+    $para.= " -c $boot/boot.catalog";
+    $para.= " -hide $boot/boot.catalog -hide-joliet $boot/boot.catalog";
+    $this -> {params} = $para;
+    return $this;
+}
+
+#==========================================
 # callBootMethods
 #------------------------------------------
 sub callBootMethods {
@@ -534,7 +570,7 @@ sub createLegacySortFile {
         $this -> cleanISO();
         return;
     }
-    if ($arch ne "aarch64") {
+    if ($arch ne "aarch64" && $arch ne "riscv64") {
         find ({wanted => $wref,follow => 0 },$src."/".$base{$arch}{boot}."/loader");
     }
     print $FD "$ldir/".$base{$arch}{boot}."/boot.catalog 3"."\n";
