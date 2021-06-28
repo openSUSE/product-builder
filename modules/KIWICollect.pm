@@ -999,64 +999,64 @@ sub setupPackageFiles {
             }
             my %require_version = %{$packOptions->{requireVersion} || {}};
             my $fb_available = 0;
-                PACKKEY:
-                for my $packKey( sort {
-                        $poolPackages->{$a}->{priority}
-                        <=> $poolPackages->{$b}->{priority}
-					|| indexOfArray($poolPackages->{$a}->{arch}, \@fallbacklist)
-					<=> indexOfArray($poolPackages->{$b}->{arch}, \@fallbacklist)
-                    } keys(%{$poolPackages})
-                ) {
+            PACKKEY:
+            for my $packKey( sort {
+                    $poolPackages->{$a}->{priority}
+                    <=> $poolPackages->{$b}->{priority}
+            			|| indexOfArray($poolPackages->{$a}->{arch}, \@fallbacklist)
+            			<=> indexOfArray($poolPackages->{$b}->{arch}, \@fallbacklist)
+                } keys(%{$poolPackages})
+            ) {
+                if ($this->{m_debug} >= 5) {
+                    $this->logMsg('I', "  check $packKey ");
+                }
+            
+                my $arch;
+                my $packPointer = $poolPackages->{$packKey};
+                for my $checkarch(@fallbacklist) {
                     if ($this->{m_debug} >= 5) {
-                        $this->logMsg('I', "  check $packKey ");
+                        $this->logMsg('I', "    check architecture $checkarch ");
                     }
-
-                    my $arch;
-                    my $packPointer = $poolPackages->{$packKey};
-		    for my $checkarch(@fallbacklist) {
-                        if ($this->{m_debug} >= 5) {
-                            $this->logMsg('I', "    check architecture $checkarch ");
+                    # sort keys 1st by repository order and secondary by architecture priority
+                    if ( $packPointer->{arch} ne $checkarch ) {
+                        if ($this->{m_debug} >= 4) {
+                            my $msg = "     => package $packName not available "
+                                      ."for arch $checkarch in repo $packKey";
+                            $this->logMsg('I', $msg);
                         }
-                        # sort keys 1st by repository order and secondary by architecture priority
-                        if ( $packPointer->{arch} ne $checkarch ) {
+                        next;
+                    }
+                    if ($nofallback==0
+                        && $mode != 2 && $this->{m_archlist}->arch($checkarch)) {
+                        my $follow = $this->{m_archlist}->arch($checkarch)->follower();
+                        if( defined $follow ) {
                             if ($this->{m_debug} >= 4) {
-                                my $msg = "     => package $packName not available "
-                                          ."for arch $checkarch in repo $packKey";
+                                my $msg = " => falling back to $follow "
+                                    . "from $packKey instead";
                                 $this->logMsg('I', $msg);
+                            }
+                        }
+                    }
+                    if (%require_version) {
+                        if (!defined($require_version{$packPointer->{version}."-".$packPointer->{release}})) {
+                            if ($this->{m_debug} >= 4) {
+                                my $msg = "     => package "
+                                          .$packName
+                                          .'-'
+                                          .$packPointer->{version}
+                                          .'-'
+                                          .$packPointer->{release}
+                                          ." not available for arch $checkarch in "
+                                          ."repo $packKey in this version";
+                                $this->logMsg('D', $msg);
                             }
                             next;
                         }
-                        if ($nofallback==0
-                            && $mode != 2 && $this->{m_archlist}->arch($checkarch)) {
-                            my $follow = $this->{m_archlist}->arch($checkarch)->follower();
-                            if( defined $follow ) {
-                                if ($this->{m_debug} >= 4) {
-                                    my $msg = " => falling back to $follow "
-                                        . "from $packKey instead";
-                                    $this->logMsg('I', $msg);
-                                }
-                            }
-                        }
-                        if (%require_version) {
-                            if (!defined($require_version{$packPointer->{version}."-".$packPointer->{release}})) {
-                                if ($this->{m_debug} >= 4) {
-                                    my $msg = "     => package "
-                                              .$packName
-                                              .'-'
-                                              .$packPointer->{version}
-                                              .'-'
-                                              .$packPointer->{release}
-                                              ." not available for arch $checkarch in "
-                                              ."repo $packKey in this version";
-                                    $this->logMsg('D', $msg);
-                                }
-                                next;
-                            }
-                            delete $require_version{$packPointer->{version}."-".$packPointer->{release}};
-                        }
-                        # Success, found a package !
-                        $arch = $checkarch;
-                        last;
+                        delete $require_version{$packPointer->{version}."-".$packPointer->{release}};
+                    }
+                    # Success, found a package !
+                    $arch = $checkarch;
+                    last;
                 }
                 next unless defined $arch;
 
