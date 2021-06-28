@@ -997,6 +997,7 @@ sub setupPackageFiles {
                     . '<';
                 $this->logMsg('I', $msg);
             }
+            my %require_version = %{$packOptions->{requireVersion} || {}};
             my $fb_available = 0;
                 PACKKEY:
                 for my $packKey( sort {
@@ -1036,25 +1037,26 @@ sub setupPackageFiles {
                                 }
                             }
                         }
-                        if ( scalar(keys %{$packOptions->{requireVersion}}) > 0
-                             && ! defined($packOptions->{requireVersion}->{$packPointer->{version}
-                                           ."-".$packPointer->{release}}) ) {
-                             if ($this->{m_debug} >= 4) {
-                                my $msg = "     => package "
-                                          .$packName
-                                          .'-'
-                                          .$packPointer->{version}
-                                          .'-'
-                                          .$packPointer->{release}
-                                          ." not available for arch $checkarch in "
-                                          ."repo $packKey in this version";
-                                $this->logMsg('D', $msg);
-                             }
-                             next;
-                    }
-                    # Success, found a package !
-                    $arch = $checkarch;
-                    last;
+                        if (%require_version) {
+                            if (!defined($require_version{$packPointer->{version}."-".$packPointer->{release}})) {
+                                if ($this->{m_debug} >= 4) {
+                                    my $msg = "     => package "
+                                              .$packName
+                                              .'-'
+                                              .$packPointer->{version}
+                                              .'-'
+                                              .$packPointer->{release}
+                                              ." not available for arch $checkarch in "
+                                              ."repo $packKey in this version";
+                                    $this->logMsg('D', $msg);
+                                }
+                                next;
+                            }
+                            delete $require_version{$packPointer->{version}."-".$packPointer->{release}};
+                        }
+                        # Success, found a package !
+                        $arch = $checkarch;
+                        last;
                 }
                 next unless defined $arch;
 
@@ -1160,7 +1162,7 @@ sub setupPackageFiles {
                 }
 
                 # package processed, jump to the next request arch or package
-                next ARCH;
+                next ARCH unless %require_version;
             } # /FARCH
             if ($this->{m_debug} >= 1) {
                 my $msg = "    => package $packName not available for "
