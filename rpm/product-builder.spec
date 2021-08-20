@@ -42,7 +42,11 @@ Requires:       perl-libwww-perl
 
 Provides:       kiwi-packagemanager:instsource
 Provides:       system-packages:kiwi-product
+%if 0%{?suse_version}
 Requires:       build
+%else
+Requires:       obs-build
+%endif
 Requires:       checkmedia
 Requires:       inst-source-utils
 Requires:       mkisofs
