@@ -942,6 +942,9 @@ sub setupPackageFiles {
     my $count_packs = 0;
     my $num_packs = keys %{$usedPackages};
     my @missingPackages = ();
+
+    my $use_newest_package = defined($this->{m_proddata}->getOpt("USE_NEWEST_PACKAGE"));
+
     PACK:
     for my $packName(keys(%{$usedPackages})) {
         if ($packName eq "_name") {
@@ -999,14 +1002,20 @@ sub setupPackageFiles {
             }
             my %require_version = %{$packOptions->{requireVersion} || {}};
             my $fb_available = 0;
+            my @sorted_keys;
+            if ($use_newest_package) {
+               @sorted_keys = sort {package_is_newer($poolPackages->{$a}, $poolPackages->{$b})} keys(%{$poolPackages});
+	    } else {
+               @sorted_keys = sort {
+                       $poolPackages->{$a}->{priority}
+                       <=> $poolPackages->{$b}->{priority}
+               			|| indexOfArray($poolPackages->{$a}->{arch}, \@fallbacklist)
+               			<=> indexOfArray($poolPackages->{$b}->{arch}, \@fallbacklist)
+                   } keys(%{$poolPackages});
+            }
+
             PACKKEY:
-            for my $packKey( sort {
-                    $poolPackages->{$a}->{priority}
-                    <=> $poolPackages->{$b}->{priority}
-            			|| indexOfArray($poolPackages->{$a}->{arch}, \@fallbacklist)
-            			<=> indexOfArray($poolPackages->{$b}->{arch}, \@fallbacklist)
-                } keys(%{$poolPackages})
-            ) {
+            for my $packKey(@sorted_keys) {
                 if ($this->{m_debug} >= 5) {
                     $this->logMsg('I', "  check $packKey ");
                 }
@@ -1748,6 +1757,20 @@ sub verscmp_part {
   }
 }
 
+sub package_is_newer {
+  my ($current, $candidate) = @_;
+  my $is_newer = verscmp_part($current->{'epoch'}, $candidate->{'epoch'});
+  return 1 if $is_newer < 0;
+  if ($is_newer eq 0) {
+     $is_newer = verscmp_part($current->{'version'}, $candidate->{'version'});
+     return 1 if $is_newer < 0;
+     if ($is_newer eq 0) {
+       $is_newer = verscmp_part($current->{'release'}, $candidate->{'release'});
+       return 1 if $is_newer <= 0;
+    }
+  }
+  return 0
+}
 
 #==========================================
 # lookUpAllPackages
@@ -1874,16 +1897,7 @@ sub lookUpAllPackages {
                     if ( $packPool->{$name}->{$repokey} ) {
                         # we have it already in same repo
                         # is this one newer?
-                        my $is_newer = verscmp_part($package->{'epoch'}, $packPool->{$name}->{$repokey}->{'epoch'});
-                        next if $is_newer < 0;
-                        if ($is_newer eq 0) {
-                           $is_newer = verscmp_part($package->{'version'}, $packPool->{$name}->{$repokey}->{'version'});
-                           next if $is_newer < 0;
-                           if ($is_newer eq 0) {
-                             $is_newer = verscmp_part($package->{'release'}, $packPool->{$name}->{$repokey}->{'release'});
-                             next if $is_newer <= 0;
-                          }
-                        }
+			next if package_is_newer($package->{'epoch'}, $packPool->{$name}->{$repokey}->{'epoch'});
                     }
                     # collect data for connected source rpm
                     if( $flags{'SOURCERPM'} ) {
