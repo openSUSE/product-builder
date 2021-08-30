@@ -1004,7 +1004,7 @@ sub setupPackageFiles {
             my $fb_available = 0;
             my @sorted_keys;
             if ($use_newest_package) {
-               @sorted_keys = sort {package_is_newer($poolPackages->{$a}, $poolPackages->{$b})} keys(%{$poolPackages});
+               @sorted_keys = sort {verscmp($poolPackages->{$a}, $poolPackages->{$b})} keys(%{$poolPackages});
 	    } else {
                @sorted_keys = sort {
                        $poolPackages->{$a}->{priority}
@@ -1757,19 +1757,12 @@ sub verscmp_part {
   }
 }
 
-sub package_is_newer {
-  my ($current, $candidate) = @_;
-  my $is_newer = verscmp_part($current->{'epoch'}, $candidate->{'epoch'});
-  return 1 if $is_newer < 0;
-  if ($is_newer eq 0) {
-     $is_newer = verscmp_part($current->{'version'}, $candidate->{'version'});
-     return 1 if $is_newer < 0;
-     if ($is_newer eq 0) {
-       $is_newer = verscmp_part($current->{'release'}, $candidate->{'release'});
-       return 1 if $is_newer <= 0;
-    }
-  }
-  return 0
+sub verscmp {
+  my ($candidate, $current) = @_;
+
+  return verscmp_part($current->{'epoch'}, $candidate->{'epoch'}) ||
+         verscmp_part($current->{'version'}, $candidate->{'version'}) ||
+	 verscmp_part($current->{'release'}, $candidate->{'release'});
 }
 
 #==========================================
@@ -1897,7 +1890,7 @@ sub lookUpAllPackages {
                     if ( $packPool->{$name}->{$repokey} ) {
                         # we have it already in same repo
                         # is this one newer?
-			next if package_is_newer($package->{'epoch'}, $packPool->{$name}->{$repokey}->{'epoch'});
+			next if verscmp($packPool->{$name}->{$repokey}, $package) > 0;
                     }
                     # collect data for connected source rpm
                     if( $flags{'SOURCERPM'} ) {
