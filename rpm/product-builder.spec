@@ -23,7 +23,7 @@ Url:            http://github.com/openSUSE/product-builder
 Name:           product-builder
 Conflicts:      kiwi
 Conflicts:      kiwi-instsource
-Version:        1.2.3a
+Version:        1.4.1
 Release:        0
 Provides:       kiwi-schema = 6.2
 Source:         product-builder-%version.tar.xz
@@ -46,6 +46,7 @@ Provides:       system-packages:kiwi-product
 Requires:       build
 %else
 Requires:       obs-build
+%global debug_package %{nil}
 %endif
 Requires:       checkmedia
 Requires:       inst-source-utils
