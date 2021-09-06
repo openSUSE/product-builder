@@ -899,7 +899,7 @@ sub addDebugPackage {
         };
     }
     $this->{m_debugPacks}->{$packname}->{'requireVersion'}->
-    { "$packPointer->{'version'}-$packPointer->{'release'}" } = 1;
+    { "$packPointer->{'version'}-$packPointer->{'release'}" } = $packname;
     return;
 }
 
@@ -1143,7 +1143,7 @@ sub setupPackageFiles {
                            }
                            # get version-release string
                            $packPointer->{sourcepackage} =~ m/.*-([^-]*-[^-]*)\.[^\.]*\.rpm/;
-                           $this->{m_sourcePacks}->{$srcname}->{'requireVersion'}->{$1} = 1;
+                           $this->{m_sourcePacks}->{$srcname}->{'requireVersion'}->{$1} = $packName;
                         }
                         if ( $this->{m_debugmedium} > 0 ) {
                             # Add debug packages, we do not know,
@@ -1172,13 +1172,12 @@ sub setupPackageFiles {
 
                 # package processed, jump to the next request arch or package
                 next ARCH unless %require_version;
-            } # /FARCH
-            if ($this->{m_debug} >= 1) {
-                my $msg = "    => package $packName not available for "
-                    . "$requestedArch nor its fallbacks";
-                $this->logMsg('W', $msg);
-            }
-            push @missingPackages, $packName;
+            } # /PACKKEY
+            my $msg = "$packName not available for "
+                . "$requestedArch nor its fallbacks";
+            $msg .= " in version ".(keys(%require_version))[0]." by package ".(values(%require_version))[0] if %require_version;
+            $this->logMsg('W', "    => package $msg") if $this->{m_debug} >= 1;
+            push @missingPackages, $msg;
        } # /ARCH
     } # /PACK
     # Ignore missing packages on debug media, they may really not exist
