@@ -81,6 +81,8 @@ sub new {
     #   (...)
     # m_sourcePacks:
     #   source rpms, which are refered from m_repoPacks
+    # m_modularityPacks:
+    #   to trace variants in all modules of a package
     # m_debugPacks:
     #   debug rpms, which are refered from m_repoPacks
     # m_srcmedium:
@@ -98,11 +100,12 @@ sub new {
         m_archlist     => undef,
         m_basedir      => undef,
         m_repos        => undef,
-        m_xml        => undef,
+        m_xml          => undef,
         m_util         => undef,
         m_logger       => undef,
         m_packagePool  => undef,
         m_repoPacks    => undef,
+        m_modularityPacks  => undef,
         m_sourcePacks  => undef,
         m_debugPacks   => undef,
         m_metaPacks    => undef,
@@ -1016,10 +1019,12 @@ sub setupPackageFiles {
 
             PACKKEY:
             for my $packKey(@sorted_keys) {
+                # the packKey makes the packages unique where necessary
+		# repo@arch + @version@release (optional) + @modularity_context_without_version (optional)
                 if ($this->{m_debug} >= 5) {
                     $this->logMsg('I', "  check $packKey ");
                 }
-            
+
                 my $arch;
                 my $packPointer = $poolPackages->{$packKey};
                 for my $checkarch(@fallbacklist) {
@@ -1064,10 +1069,15 @@ sub setupPackageFiles {
                         delete $require_version{$packPointer->{version}."-".$packPointer->{release}};
                     }
                     # Success, found a package !
+		    # NOTE: no modularity filtering here, since we always use all of them. The highest
+		    #       version is already taken during all lookup
                     $arch = $checkarch;
                     last;
                 }
                 next unless defined $arch;
+
+		# check for modularity variants
+                my %require_modularity = %{$this->{m_modularityPacks}->{$packName."@".$arch} || {}};
 
                 # process package
                 my $medium = $packOptions->{'medium'} || 1;
@@ -1124,7 +1134,8 @@ sub setupPackageFiles {
                             $this->logMsg('I', $msg);
                         }
                     }
-                    if ( $mode == 1 && $packPointer->{sourcepackage} ) {
+                    if ( $mode == 1 ) {
+		      if ($packPointer->{sourcepackage} ) {
                         my $srcname = $packPointer->{sourcepackage};
                         # this strips everything, except main name
                         $srcname =~ s/-[^-]*-[^-]*\.rpm$//;
@@ -1167,11 +1178,12 @@ sub setupPackageFiles {
                                 $basename.$suffix."-debuginfo",
                                 $arch, $packPointer) unless $srcname eq $basename;
                         }
+                      }
                     }
                 }
 
                 # package processed, jump to the next request arch or package
-                next ARCH unless %require_version;
+                next ARCH unless %require_version || %require_modularity;
             } # /PACKKEY
             my $msg = "$packName not available for "
                 . "$requestedArch nor its fallbacks";
@@ -1837,6 +1849,7 @@ sub lookUpAllPackages {
                     'PROVIDENAME',
                     'PROVIDEVERSION',
                     'PROVIDEFLAGS',
+                    '5096', # modularity label
                 );
                 if(!%flags || !$flags{'NAME'} || !$flags{'RELEASE'}
                     || !$flags{'VERSION'} || !$flags{'RELEASE'}
@@ -1896,6 +1909,14 @@ sub lookUpAllPackages {
                         # collect source rpms
                         my $srcname = $flags{'SOURCERPM'}[0];
                         $package->{'sourcepackage'} = $srcname if ($srcname);
+                    }
+                    # is it a module package?
+                    if( $flags{'5096'} ) {
+                        my @e = split(':', $flags{'5096'}[0]);
+                        # strip version, but take module name, stream, context
+                        $package->{'modularity_context'} = "${e[0]}:${e[1]}:${e[3]}";
+                        $repokey .= "_".$package->{'modularity_context'};
+                        $this->{m_modularityPacks}->{$name."@".$arch}->{$package->{modularity_context}} = 1;
                     }
                     # store the result.
                     my $store;
