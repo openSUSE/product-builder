@@ -1771,7 +1771,7 @@ sub verscmp_part {
 sub verscmp {
   my ($candidate, $current) = @_;
 
-  return verscmp_part($current->{'epoch'}, $candidate->{'epoch'}) ||
+  return verscmp_part($current->{'epoch'}||0, $candidate->{'epoch'}||0) ||
          verscmp_part($current->{'version'}, $candidate->{'version'}) ||
 	 verscmp_part($current->{'release'}, $candidate->{'release'});
 }
