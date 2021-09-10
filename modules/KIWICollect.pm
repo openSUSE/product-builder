@@ -1007,7 +1007,9 @@ sub setupPackageFiles {
             my $fb_available = 0;
             my @sorted_keys;
             if ($use_newest_package) {
-               @sorted_keys = sort {verscmp($poolPackages->{$a}, $poolPackages->{$b})} keys(%{$poolPackages});
+               @sorted_keys = sort {verscmp($poolPackages->{$a}, $poolPackages->{$b})
+                                    || indexOfArray($poolPackages->{$a}->{arch}, \@fallbacklist)
+                                    <=> indexOfArray($poolPackages->{$b}->{arch}, \@fallbacklist)} keys(%{$poolPackages});
 	    } else {
                @sorted_keys = sort {
                        $poolPackages->{$a}->{priority}
@@ -1874,8 +1876,8 @@ sub lookUpAllPackages {
                     # directory structure up.
                     my $package;
                     $package->{'arch'} = $arch;
-# what for?
-#                    $package->{'repo'} = $this->{m_repos}->{$r};
+#                   $package->{'repo'} = $this->{m_repos}->{$r};
+#                   $package->{'repo'}->{'srcdirs'} = {} if $package->{'repo'};
                     $package->{'localfile'} = $uri;
                     $package->{'disturl'} = $flags{'DISTURL'}[0];
                     $package->{'license'} = $flags{'LICENSE'}[0];
