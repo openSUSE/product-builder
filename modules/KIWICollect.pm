@@ -1916,7 +1916,7 @@ sub lookUpAllPackages {
                     if( $flags{'5096'} ) {
                         my @e = split(':', $flags{'5096'}[0]);
                         # strip version, but take module name, stream, context
-                        $package->{'modularity_context'} = "${e[0]}:${e[1]}:${e[3]}";
+                        $package->{'modularity_context'} = $e[0].":".$e[1].":".$e[3];
                         $repokey .= "_".$package->{'modularity_context'};
                         $this->{m_modularityPacks}->{$name."@".$arch}->{$package->{modularity_context}} = 1;
                     }
