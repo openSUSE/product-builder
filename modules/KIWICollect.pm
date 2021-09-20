@@ -1876,8 +1876,7 @@ sub lookUpAllPackages {
                     # directory structure up.
                     my $package;
                     $package->{'arch'} = $arch;
-#                   $package->{'repo'} = $this->{m_repos}->{$r};
-#                   $package->{'repo'}->{'srcdirs'} = {} if $package->{'repo'};
+                    $package->{'repo'} = $this->{m_repos}->{$r};
                     $package->{'localfile'} = $uri;
                     $package->{'disturl'} = $flags{'DISTURL'}[0];
                     $package->{'license'} = $flags{'LICENSE'}[0];
