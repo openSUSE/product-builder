@@ -59,8 +59,8 @@ sub _new_instance {
     #------------------------------------------
     my %data;
     $data{Version}         = "1.01.01";
-    $data{Publisher}       = "SUSE LINUX GmbH";
-    $data{Preparer}        = "KIWI - http://opensuse.github.com/kiwi";
+    $data{Publisher}       = "SUSE LLC";
+    $data{Preparer}        = "Product Builder - http://www.github.com/openSUSE/product-builder";
     $data{ConfigName}      = "config.xml";
     $data{PackageManager}  = "zypper";
     #============================================
