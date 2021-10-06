@@ -1647,6 +1647,12 @@ given arch should be removed</a:documentation>
 the given arch should be used in any case</a:documentation>
       </attribute>
     </define>
+    <define name="k.repopackage.module.attribute">
+      <attribute name="module">
+        <a:documentation>Specifies that the package must
+come from the given module(s)</a:documentation>
+      </attribute>
+    </define>
     <define name="k.repopackage.medium.attribute">
       <attribute name="medium">
         <a:documentation>Specifies that the package will be put
@@ -1677,6 +1683,9 @@ to the specific medium number (CD1, DVD7, ...)</a:documentation>
         </optional>
         <optional>
           <ref name="k.repopackage.onlyarch.attribute"/>
+        </optional>
+        <optional>
+          <ref name="k.repopackage.module.attribute"/>
         </optional>
         <optional>
           <ref name="k.repopackage.source.attribute"/>

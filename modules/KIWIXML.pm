@@ -3732,6 +3732,7 @@ sub __genMetadataPkgsArray {
             name       => $pckgNd -> getAttribute('name'),
                 onlyarch   => $pckgNd -> getAttribute('onlyarch'),
                 removearch => $pckgNd -> getAttribute('removearch'),
+                module     => $pckgNd -> getAttribute('module'),
                 script     => $pckgNd -> getAttribute('script'),
                 source     => $pckgNd -> getAttribute('source')
         );
@@ -3869,6 +3870,7 @@ sub __genRepoPackagesArray {
             name       => $pkgNd -> getAttribute('name'),
                 onlyarch   => $pkgNd -> getAttribute('onlyarch'),
                 removearch => $pkgNd -> getAttribute('removearch'),
+                module     => $pkgNd -> getAttribute('module'),
                 script     => $pkgNd -> getAttribute('script'),
                 source     => $pkgNd -> getAttribute('source')
         );

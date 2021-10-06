@@ -1020,6 +1020,8 @@ sub setupPackageFiles {
             #                        need to get added in addition in any case)
             my $found_package;
             my $found_modularity_package;
+            my @requested_modules;
+            @requested_modules = split(/\s*,\s*/, $packOptions->{module}) if $packOptions->{module};
 
             PACKKEY:
             for my $packKey(@sorted_keys) {
@@ -1029,10 +1031,22 @@ sub setupPackageFiles {
                     $this->logMsg('I', "  check $packKey ");
                 }
 
-                next if ($found_package && !%require_version);
-
                 my $arch;
                 my $packPointer = $poolPackages->{$packKey};
+                my $modularity_context = $packPointer->{modularity_context};
+
+                next if ($found_package && !$modularity_context && !%require_version);
+
+                if (@requested_modules) {
+                    if ($requested_modules[0] eq 'none') {
+                        next if $modularity_context;
+                    } elsif ($requested_modules[0] eq 'all') {
+                        next unless $modularity_context;
+                    } else {
+                        next unless $modularity_context && grep {"$modularity_context:" =~ /^\Q$_\E:/} @requested_modules;
+                    }
+                }
+
                 for my $checkarch(@fallbacklist) {
                     if ($this->{m_debug} >= 5) {
                         $this->logMsg('I', "    check architecture $checkarch ");
@@ -1185,7 +1199,7 @@ sub setupPackageFiles {
                     }
                 }
 
-                if ($packPointer->{modularity_context}) {
+                if ($modularity_context) {
                     $found_modularity_package = 1;
                 } else {
                     $found_package = 1;

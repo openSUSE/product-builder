@@ -49,6 +49,7 @@ sub new {
         medium
         onlyarch
         removearch
+        module
         script
         source
     );
@@ -65,6 +66,7 @@ sub new {
     $this->{medium}     = $init->{medium};
     $this->{onlyarch}   = $init->{onlyarch};
     $this->{removearch} = $init->{removearch};
+    $this->{module}     = $init->{module};
     $this->{script}     = $init->{script};
     $this->{source}     = $init->{source};
     return $this;
@@ -129,6 +131,17 @@ sub getRemoveArch {
 }
 
 #==========================================
+# getModule
+#------------------------------------------
+sub getModule {
+    # ...
+    # Return the module value, if any
+    # ---
+    my $this = shift;
+    return $this->{module};
+}
+
+#==========================================
 # getScriptPath
 #------------------------------------------
 sub getScriptPath {
@@ -178,6 +191,10 @@ sub getXMLElement {
     my $rarch = $this -> getRemoveArch();
     if ($rarch) {
         $elem -> setAttribute('removearch', $rarch);
+    }
+    my $module = $this -> getModule();
+    if ($module) {
+        $elem -> setAttribute('module', $module);
     }
     my $script = $this -> getScriptPath();
     if ($script) {

@@ -1295,6 +1295,10 @@ div {
         ## Specifies that the package with
         ## the given arch should be used in any case
         attribute onlyarch { text }
+    k.repopackage.module.attribute =
+        ## Specifies that the package must
+        ## come from the given module(s)
+        attribute module { text }
     k.repopackage.medium.attribute =
         ## Specifies that the package will be put
         ## to the specific medium number (CD1, DVD7, ...)
@@ -1308,6 +1312,7 @@ div {
         k.repopackage.addarch.attribute? &
         k.repopackage.removearch.attribute? &
         k.repopackage.onlyarch.attribute? &
+        k.repopackage.module.attribute? &
         k.repopackage.source.attribute? &
         k.repopackage.script.attribute? &
         k.repopackage.medium.attribute?
