@@ -304,6 +304,7 @@ sub Init {
         $attr{source}    = $package -> getSourceLocation();
         $attr{script}    = $package -> getScriptPath();
         $attr{medium}    = $package -> getMediaID();
+        $attr{module}    = $package -> getModule();
         $instPacks{$name} = \%attr;
     }
     $this->logMsg('I', "KIWICollect::Init: querying instsource package list");
