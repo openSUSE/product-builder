@@ -798,7 +798,7 @@ sub mainTask {
         );
         # Just the first media is usually bootable at SUSE
         my $is_bootable = 0;
-        if(-d "$this->{m_basesubdir}->{$cd}/boot") {
+        if(-d "$this->{m_basesubdir}->{$cd}/boot" || -d "$this->{m_basesubdir}->{$cd}/isolinux") {
             if(!$iso->callBootMethods()) {
                 my $msg = 'Creating boot methods failed, medium maybe '
                     . 'not be bootable';
@@ -1631,6 +1631,7 @@ sub unpackMetapackages {
                             qx(cp -a $tmp/usr/lib/skelcd/CD$_/* $this->{m_basesubdir}->{$_});
                             # .treeinfo for virt-installer:
                             qx(cp -a $tmp/usr/lib/skelcd/CD$_/.treeinfo $this->{m_basesubdir}->{$_}) if (-f "$tmp/usr/lib/skelcd/CD$_/.treeinfo");
+                            qx(cp -a $tmp/usr/lib/skelcd/CD$_/.discinfo $this->{m_basesubdir}->{$_}) if (-f "$tmp/usr/lib/skelcd/CD$_/.discinfo");
                             $this->logMsg('I', "Unpack CD$_");
                             $packageFound = 1;
                         } elsif (-d "$tmp/CD$_"

@@ -80,6 +80,7 @@ sub new {
     my $sort;
     my $ldir;
     my $tool;
+    my $tool_type;
     my $check = 0;
     #==========================================
     # create log object if not done
@@ -102,10 +103,12 @@ sub new {
     my $genTool = $locator -> getExecPath('genisoimage');
     if ($genTool && -x $genTool) {
         $tool = $genTool;
+        $tool_type = "genisoimage";
     } else {
         my $mkTool = $locator -> getExecPath('mkisofs');
         if ($mkTool && -x $mkTool) {
             $tool = $mkTool;
+            $tool_type = "mkisofs";
         } else {
             $kiwi -> error  ("No ISO creation tool found");
             $kiwi -> failed ();
@@ -128,9 +131,16 @@ sub new {
     $base{ix86}{loader}  = "boot/i386/loader/isolinux.bin";
     $base{ix86}{efi}     = "boot/i386/efi";
     # x86_64
-    $base{x86_64}{boot}  = "boot/x86_64";
-    $base{x86_64}{loader}= "boot/x86_64/loader/isolinux.bin";
-    $base{x86_64}{efi}   = "boot/x86_64/efi";
+    if(-f "$source/isolinux/isolinux.bin") {
+      $base{x86_64}{boot}  = "isolinux";
+      $base{x86_64}{loader}= "isolinux/isolinux.bin";
+      $base{x86_64}{efi}   = "images/efiboot.img";
+    }
+    else {
+      $base{x86_64}{boot}  = "boot/x86_64";
+      $base{x86_64}{loader}= "boot/x86_64/loader/isolinux.bin";
+      $base{x86_64}{efi}   = "boot/x86_64/efi";
+    }
     # ia64
     $base{ia64}{boot}    = "boot/ia64";
     $base{ia64}{loader}  = "undef";
@@ -251,11 +261,13 @@ sub new {
     $this -> {tmpdir}      = $ldir;
     $this -> {catalog}     = \@catalog;
     $this -> {tool}        = $tool;
+    $this -> {tool_type}   = $tool_type;
     $this -> {check}       = $mediacheck;
     $this -> {gdata}       = $global -> getKiwiConfig();
     $this -> {cmdL}        = $cmdL;
     $this -> {xml}         = $xml;
     $this -> {magicID}     = '7984fc91-a43f-4e45-bf27-6d3aa08b24cf';
+    $this -> {media_type}  = -f "$source/media.repo" ? 'rh' : 'suse';
     return $this;
 }
 
@@ -327,7 +339,7 @@ sub x86_64_efi {
     my $loader= $base{$arch}{efi};
     my $sort  = $this -> createLegacySortFile ("x86_64");
     my $src   = $this -> {source};
-    KIWIQX::qxx ("echo $src/boot/$arch/efi 1000001 >> $sort");
+    KIWIQX::qxx ("echo $src/$loader 1000001 >> $sort");
     #==========================================
     # add end-of-header marker
     #------------------------------------------
@@ -336,10 +348,10 @@ sub x86_64_efi {
     $para.= " -hide glump -hide-joliet glump";
     $para.= " -sort $sort" if $sort;
     $para.= " -eltorito-alt-boot";
-    $para.= " -eltorito-platform efi";
+    $para.= " -eltorito-platform efi" if $this->{tool_type} eq "mkisofs";
     $para.= " -no-emul-boot";
     $para.= " -boot-load-size ".$this->block_size($this->{source}."/".$loader);
-    $para.= " -b $loader";
+    $para.= ($this->{tool_type} eq "mkisofs" ? " -b " : " -e ") . $loader;
     $this -> {params} = $para;
     return $this;
 }
@@ -356,10 +368,10 @@ sub ix86_efi {
     my $loader= $base{$arch}{efi};
 
     $para.= " -eltorito-alt-boot";
-    $para.= " -eltorito-platform efi";
+    $para.= " -eltorito-platform efi" if $this->{tool_type} eq "mkisofs";
     $para.= " -no-emul-boot";
     $para.= " -boot-load-size ".$this->block_size($this->{source}."/".$loader);
-    $para.= " -b $loader";
+    $para.= ($this->{tool_type} eq "mkisofs" ? " -b " : " -e ") . $loader;
     $this -> {params} = $para;
     return $this;
 }
@@ -482,7 +494,7 @@ sub aarch64_efi {
     my $loader= $base{$arch}{efi};
     my $sort  = $this -> createLegacySortFile ("aarch64");
     my $src   = $this -> {source};
-    KIWIQX::qxx ("echo $src/boot/$arch/efi 1000001 >> $sort");
+    KIWIQX::qxx ("echo $src/$loader 1000001 >> $sort");
     #==========================================
     # add end-of-header marker
     #------------------------------------------
@@ -492,7 +504,7 @@ sub aarch64_efi {
     $para.= " -sort $sort" if $sort;
     $para.= " -no-emul-boot";
     # do not add -boot-load-size 1 here
-    $para.= " -b $loader";
+    $para.= ($this->{tool_type} eq "mkisofs" ? " -b " : " -e ") . $loader;
     $para.= " -c $boot/boot.catalog";
     $para.= " -hide $boot/boot.catalog -hide-joliet $boot/boot.catalog";
     $this -> {params} = $para;
@@ -512,7 +524,7 @@ sub armv7l_efi {
     my $loader= $base{$arch}{efi};
     my $sort  = $this -> createLegacySortFile ("armv7l");
     my $src   = $this -> {source};
-    KIWIQX::qxx ("echo $src/boot/$arch/efi 1000001 >> $sort");
+    KIWIQX::qxx ("echo $src/$loader 1000001 >> $sort");
     #==========================================
     # add end-of-header marker
     #------------------------------------------
@@ -542,7 +554,7 @@ sub riscv64_efi {
     my $loader= $base{$arch}{efi};
     my $sort  = $this -> createLegacySortFile ("riscv64");
     my $src   = $this -> {source};
-    KIWIQX::qxx ("echo $src/boot/$arch/efi 1000001 >> $sort");
+    KIWIQX::qxx ("echo $src/$loader 1000001 >> $sort");
     #==========================================
     # add end-of-header marker
     #------------------------------------------
@@ -607,8 +619,10 @@ sub createLegacySortFile {
         $this -> cleanISO();
         return;
     }
-    if ($arch ne "aarch64" && $arch ne "armv7l" && $arch ne "riscv64") {
-        find ({wanted => $wref,follow => 0 },$src."/".$base{$arch}{boot}."/loader");
+    if($base{$arch}{loader}) {
+      my $loader_dir = $base{$arch}{loader};
+      $loader_dir =~ s#/[^/]+$##;
+      find ({wanted => $wref,follow => 0 },$src."/".$loader_dir);
     }
     print $FD "$ldir/".$base{$arch}{boot}."/boot.catalog 3"."\n";
     print $FD $base{$arch}{boot}."/boot.catalog 3"."\n";
@@ -616,7 +630,7 @@ sub createLegacySortFile {
     foreach my $file (@list) {
         print $FD "$file 1"."\n";
     }
-    print $FD $src."/".$base{$arch}{boot}."/loader/isolinux.bin 2"."\n";
+    print $FD $src."/".$base{$arch}{loader}." 2"."\n" if $base{$arch}{loader};
     close $FD;
     $this->{sortfile} = $sort;
     return $sort;
@@ -844,6 +858,7 @@ sub createISOLinuxConfig {
         $this -> cleanISO();
         return;
     }
+    return $this unless -f "$src/$boot/loader/isolinux.bin";
     my $data = KIWIQX::qxx (
         "$isox --base $boot/loader $src/$boot/loader/isolinux.bin 2>&1"
     );
@@ -1145,10 +1160,22 @@ sub checkImage {
     my $dest = $this -> {dest};
     my $check= $this -> {check};
     my $data;
-    if (defined $this->{check}) {
-        $data = KIWIQX::qxx ("tagmedia --digest sha256 --check --pad 150 $dest 2>&1");
-    } else {
-        $data = KIWIQX::qxx ("tagmedia --digest sha256 $dest 2>&1");
+    if ($this->{media_type} eq 'rh') {
+        $data = KIWIQX::qxx ("tagmedia --digest md5 --style rh $dest 2>&1");
+        my $code = $? >> 8;
+        if ($code != 0) {
+            $kiwi -> error  ("Failed to call tagmedia: $data");
+            $kiwi -> failed ();
+            return;
+        }
+        $data = KIWIQX::qxx ("tagmedia --import-signature /dev/null $dest 2>&1");
+    }
+    else {
+        if (defined $this->{check}) {
+            $data = KIWIQX::qxx ("tagmedia --digest sha256 --check --pad 150 $dest 2>&1");
+        } else {
+            $data = KIWIQX::qxx ("tagmedia --digest sha256 $dest 2>&1");
+        }
     }
     my $code = $? >> 8;
     if ($code != 0) {
