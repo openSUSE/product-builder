@@ -1259,7 +1259,10 @@ sub createHybrid {
     #==========================================
     # Create partition table on iso
     #------------------------------------------
-    my $cmd = "$isoHybrid $offsetOpt $offset";
+    my $cmd = $isoHybrid;
+    if ($this->{media_type} eq 'suse') {
+        $cmd .= " $offsetOpt $offset";
+    }
     if ($mbrid) {
         $cmd.= " $idOpt $mbrid $typeOpt 0x83";
     }
