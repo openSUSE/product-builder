@@ -115,6 +115,14 @@ sub new {
             return;
         }
     }
+    #==========================================
+    # Hybrid mode?
+    #------------------------------------------
+    my $hybrid;
+    if ($xml) {
+        my $type = $xml -> getImageType();
+        $hybrid = $type -> getHybrid();
+    }
     #=======================================
     # path setup for supported archs
     #---------------------------------------
@@ -169,7 +177,7 @@ sub new {
     # 1) search for legacy boot
     #---------------------------------------
     foreach my $arch (sort keys %base) {
-        if (-d $source."/".$base{$arch}{boot}) {
+        if ($base{$arch}{boot} && -d $source."/".$base{$arch}{boot}) {
             if ($arch eq "x86_64") {
                 $catalog[0] = "x86_64_legacy";
             }
@@ -265,6 +273,7 @@ sub new {
     $this -> {check}       = $mediacheck;
     $this -> {gdata}       = $global -> getKiwiConfig();
     $this -> {cmdL}        = $cmdL;
+    $this -> {hybrid}      = $hybrid;
     $this -> {xml}         = $xml;
     $this -> {magicID}     = '7984fc91-a43f-4e45-bf27-6d3aa08b24cf';
     $this -> {media_type}  = -f "$source/media.repo" ? 'rh' : 'suse';
@@ -293,16 +302,19 @@ sub x86_64_legacy {
     my $this  = shift;
     my $arch  = shift;
     my %base  = %{$this->{base}};
-    my $para  = $this -> {params};
-    my $sort  = $this -> createLegacySortFile ("x86_64");
     my $boot  = $base{$arch}{boot};
     my $loader= $base{$arch}{loader};
-    $para.= " -sort $sort" if $sort;
+    my $para  = $this -> {params};
+
+    $para.= $this -> createSortFile ($arch);
+    $para.= $this -> prepare_for_hybrid ();
     $para.= " -no-emul-boot -boot-load-size 4 -boot-info-table";
     $para.= " -b $loader -c $boot/boot.catalog";
     $para.= " -hide $boot/boot.catalog -hide-joliet $boot/boot.catalog";
     $this -> {params} = $para;
+
     $this -> createISOLinuxConfig ($boot);
+
     return $this;
 }
 
@@ -313,18 +325,22 @@ sub ix86_legacy {
     my $this  = shift;
     my $arch  = shift;
     my %base  = %{$this->{base}};
-    my $para  = $this -> {params};
-    my $sort  = $this -> createLegacySortFile ("ix86");
     my $boot  = $base{$arch}{boot};
     my $loader= $base{$arch}{loader};
-    $para.= " -sort $sort" if $sort;
+    my $para  = $this -> {params};
+
+    $para.= $this -> createSortFile ($arch);
+    $para.= $this -> prepare_for_hybrid ();
     $para.= " -no-emul-boot -boot-load-size 4 -boot-info-table";
     $para.= " -b $loader -c $boot/boot.catalog";
     $para.= " -hide $boot/boot.catalog -hide-joliet $boot/boot.catalog";
     $this -> {params} = $para;
+
     $this -> createISOLinuxConfig ($boot);
+
     return $this;
 }
+
 
 #==========================================
 # x86_64_efi
@@ -333,26 +349,19 @@ sub x86_64_efi {
     my $this  = shift;
     my $arch  = shift;
     my %base  = %{$this->{base}};
-    my $para  = $this -> {params};
-    my $magicID= $this -> {magicID};
     my $boot  = $base{$arch}{boot};
     my $loader= $base{$arch}{efi};
-    my $sort  = $this -> createLegacySortFile ("x86_64");
-    my $src   = $this -> {source};
-    KIWIQX::qxx ("echo $src/$loader 1000001 >> $sort");
-    #==========================================
-    # add end-of-header marker
-    #------------------------------------------
-    KIWIQX::qxx ("echo $magicID > ".$this->{tmpdir}."/glump");
-    KIWIQX::qxx ("echo ".$this->{tmpdir}."/glump 1000000 >> $sort") if $sort;
-    $para.= " -hide glump -hide-joliet glump";
-    $para.= " -sort $sort" if $sort;
+    my $para  = $this -> {params};
+
+    $para.= $this -> createSortFile ($arch);
+    $para.= $this -> prepare_for_hybrid ();
     $para.= " -eltorito-alt-boot";
     $para.= " -eltorito-platform efi" if $this->{tool_type} eq "mkisofs";
     $para.= " -no-emul-boot";
     $para.= " -boot-load-size ".$this->block_size($this->{source}."/".$loader);
     $para.= ($this->{tool_type} eq "mkisofs" ? " -b " : " -e ") . $loader;
     $this -> {params} = $para;
+
     return $this;
 }
 
@@ -363,16 +372,19 @@ sub ix86_efi {
     my $this  = shift;
     my $arch  = shift;
     my %base  = %{$this->{base}};
-    my $para  = $this -> {params};
     my $boot  = $base{$arch}{boot};
     my $loader= $base{$arch}{efi};
+    my $para  = $this -> {params};
 
+    $para.= $this -> createSortFile ($arch);
+    $para.= $this -> prepare_for_hybrid ();
     $para.= " -eltorito-alt-boot";
     $para.= " -eltorito-platform efi" if $this->{tool_type} eq "mkisofs";
     $para.= " -no-emul-boot";
     $para.= " -boot-load-size ".$this->block_size($this->{source}."/".$loader);
     $para.= ($this->{tool_type} eq "mkisofs" ? " -b " : " -e ") . $loader;
     $this -> {params} = $para;
+
     return $this;
 }
 
@@ -383,19 +395,19 @@ sub ia64_efi {
     my $this  = shift;
     my $arch  = shift;
     my %base  = %{$this->{base}};
-    my $para  = $this -> {params};
     my $boot  = $base{$arch}{boot};
     my $loader= $base{$arch}{efi};
-    my $sort  = $this -> createLegacySortFile ("ia64");
+    my $para  = $this -> {params};
 
+    $para.= $this -> createSortFile ($arch);
+    $para.= $this -> prepare_for_hybrid ();
     $para.= " -no-emul-boot";
     $para.= " -boot-load-size ".$this->block_size($this->{source}."/".$loader);
-    $para.= " -sort $sort" if $sort;
     $para.= " -b $loader";
     $para.= " -c $boot/boot.catalog";
     $para.= " -hide $boot/boot.catalog -hide-joliet $boot/boot.catalog";
-
     $this -> {params} = $para;
+
     return $this;
 }
 
@@ -406,14 +418,18 @@ sub s390_ikr {
     my $this = shift;
     my $arch = shift;
     my %base = %{$this->{base}};
-    my $para = $this -> {params};
     my $boot = $base{$arch}{boot};
     my $ikr  = $this -> createS390CDLoader($boot);
+    my $para = $this -> {params};
+
+    # s390 ISOs additionally have an x86_64 boot setup - this will trigger hybrid mode
+
     $para.= " -eltorito-alt-boot";
     $para.= " -hide $boot/boot.catalog -hide-joliet $boot/boot.catalog";
     $para.= " -no-emul-boot";
     $para.= " -b $ikr";
     $this -> {params} = $para;
+
     return $this;
 }
 
@@ -424,14 +440,18 @@ sub s390x_ikr {
     my $this = shift;
     my $arch = shift;
     my %base = %{$this->{base}};
-    my $para = $this -> {params};
     my $boot = $base{$arch}{boot};
     my $ikr  = $this -> createS390CDLoader($boot);
+    my $para = $this -> {params};
+
+    # s390x ISOs additionally have an x86_64 boot setup - this will trigger hybrid mode
+
     $para.= " -eltorito-alt-boot";
     $para.= " -hide $boot/boot.catalog -hide-joliet $boot/boot.catalog";
     $para.= " -no-emul-boot";
     $para.= " -b $ikr";
     $this -> {params} = $para;
+
     return $this;
 }
 
@@ -442,10 +462,12 @@ sub ppc64_default {
     my $this  = shift;
     my $arch  = shift;
     my %base  = %{$this->{base}};
-    my $para  = $this -> {params};
     my $src   = $this -> {source};
     my $boot  = $base{$arch}{boot};
     my $volid = $this -> createVolumeID();
+    my $para  = $this -> {params};
+
+    # ppc64 doesn't need an extra isohybrid call
 
     $para.= " -chrp-boot";
     $para.= " -hfs-bless $src/$boot/grub2-ieee1275";
@@ -458,18 +480,20 @@ sub ppc64_default {
     $para.= " -part";
     $para.= " -U";
     $this -> {params} = $para;
+
     return $this;
 }
 
 sub ppc64le_default {
     my $this = shift;
     my $arch = shift;
-
     my %base  = %{$this->{base}};
-    my $para  = $this -> {params};
     my $src   = $this -> {source};
     my $boot  = $base{$arch}{boot};
     my $volid = $this -> createVolumeID();
+    my $para  = $this -> {params};
+
+    # ppc64le doesn't need an extra isohybrid call
 
     $para.= " -chrp-boot";
     $para.= " -hfs-bless $src/$boot/grub2-ieee1275";
@@ -478,6 +502,7 @@ sub ppc64le_default {
     $para.= " -part";
     $para.= " -U";
     $this -> {params} = $para;
+
     return $this;
 }
 
@@ -488,26 +513,19 @@ sub aarch64_efi {
     my $this  = shift;
     my $arch  = shift;
     my %base  = %{$this->{base}};
-    my $para  = $this -> {params};
-    my $magicID= $this -> {magicID};
     my $boot  = $base{$arch}{boot};
     my $loader= $base{$arch}{efi};
-    my $sort  = $this -> createLegacySortFile ("aarch64");
-    my $src   = $this -> {source};
-    KIWIQX::qxx ("echo $src/$loader 1000001 >> $sort");
-    #==========================================
-    # add end-of-header marker
-    #------------------------------------------
-    KIWIQX::qxx ("echo $magicID > ".$this->{tmpdir}."/glump");
-    KIWIQX::qxx ("echo ".$this->{tmpdir}."/glump 1000000 >> $sort") if $sort;
-    $para.= " -hide glump -hide-joliet glump";
-    $para.= " -sort $sort" if $sort;
+    my $para  = $this -> {params};
+
+    $para.= $this -> createSortFile ($arch);
+    $para.= $this -> prepare_for_hybrid ();
     $para.= " -no-emul-boot";
     # do not add -boot-load-size 1 here
     $para.= ($this->{tool_type} eq "mkisofs" ? " -b " : " -e ") . $loader;
     $para.= " -c $boot/boot.catalog";
     $para.= " -hide $boot/boot.catalog -hide-joliet $boot/boot.catalog";
     $this -> {params} = $para;
+
     return $this;
 }
 
@@ -518,26 +536,19 @@ sub armv7l_efi {
     my $this  = shift;
     my $arch  = shift;
     my %base  = %{$this->{base}};
-    my $para  = $this -> {params};
-    my $magicID= $this -> {magicID};
     my $boot  = $base{$arch}{boot};
     my $loader= $base{$arch}{efi};
-    my $sort  = $this -> createLegacySortFile ("armv7l");
-    my $src   = $this -> {source};
-    KIWIQX::qxx ("echo $src/$loader 1000001 >> $sort");
-    #==========================================
-    # add end-of-header marker
-    #------------------------------------------
-    KIWIQX::qxx ("echo $magicID > ".$this->{tmpdir}."/glump");
-    KIWIQX::qxx ("echo ".$this->{tmpdir}."/glump 1000000 >> $sort") if $sort;
-    $para.= " -hide glump -hide-joliet glump";
-    $para.= " -sort $sort" if $sort;
+    my $para  = $this -> {params};
+
+    $para.= $this -> createSortFile ($arch);
+    $para.= $this -> prepare_for_hybrid ();
     $para.= " -no-emul-boot";
     # do not add -boot-load-size 1 here
     $para.= " -b $loader";
     $para.= " -c $boot/boot.catalog";
     $para.= " -hide $boot/boot.catalog -hide-joliet $boot/boot.catalog";
     $this -> {params} = $para;
+
     return $this;
 }
 
@@ -548,25 +559,19 @@ sub riscv64_efi {
     my $this  = shift;
     my $arch  = shift;
     my %base  = %{$this->{base}};
-    my $para  = $this -> {params};
-    my $magicID= $this -> {magicID};
     my $boot  = $base{$arch}{boot};
     my $loader= $base{$arch}{efi};
-    my $sort  = $this -> createLegacySortFile ("riscv64");
-    my $src   = $this -> {source};
-    KIWIQX::qxx ("echo $src/$loader 1000001 >> $sort");
-    #==========================================
-    # add end-of-header marker
-    #------------------------------------------
-    KIWIQX::qxx ("echo $magicID > ".$this->{tmpdir}."/glump");
-    KIWIQX::qxx ("echo ".$this->{tmpdir}."/glump 1000000 >> $sort") if $sort;
-    $para.= " -sort $sort" if $sort;
+    my $para  = $this -> {params};
+
+    $para.= $this -> createSortFile ($arch);
+    $para.= $this -> prepare_for_hybrid ();
     $para.= " -no-emul-boot";
     # do not add -boot-load-size 1 here
     $para.= " -b $loader";
     $para.= " -c $boot/boot.catalog";
     $para.= " -hide $boot/boot.catalog -hide-joliet $boot/boot.catalog";
     $this -> {params} = $para;
+
     return $this;
 }
 
@@ -597,9 +602,11 @@ sub callBootMethods {
 }
     
 #==========================================
-# createLegacySortFile
+# createSortFile
 #------------------------------------------
-sub createLegacySortFile {
+sub createSortFile {
+    # Create sort file for mkisofs and return a command line parameter
+    # suitable for mkisofs.
     my $this = shift;
     my $arch = shift;
     my $kiwi = $this->{kiwi};
@@ -608,32 +615,29 @@ sub createLegacySortFile {
     my $sort = $this->{tmpfile};
     my $ldir = $this->{tmpdir};
     my $FD;
-    if (! -d $src."/".$base{$arch}{boot}) {
-        return;
-    }
-    my @list = ();
-    my $wref = $this -> __generateWanted (\@list);
+
+    return "" if ! -d $src."/".$base{$arch}{boot};
+
     if (! open $FD, '>', "$sort") {
         $kiwi -> error  ("Failed to open sort file: $!");
         $kiwi -> failed ();
         $this -> cleanISO();
-        return;
+        return "";
     }
-    if($base{$arch}{loader}) {
-      my $loader_dir = $base{$arch}{loader};
-      $loader_dir =~ s#/[^/]+$##;
-      find ({wanted => $wref,follow => 0 },$src."/".$loader_dir);
+
+    if ($base{$arch}{loader}) {
+      print $FD "$src/$base{$arch}{loader} 2\n";
+      (my $loader_dir = $base{$arch}{loader}) =~ s#/[^/]+$##;
+      print $FD "$src/$loader_dir 1\n";
     }
-    print $FD "$ldir/".$base{$arch}{boot}."/boot.catalog 3"."\n";
-    print $FD $base{$arch}{boot}."/boot.catalog 3"."\n";
-    print $FD "$src/".$base{$arch}{boot}."/boot.catalog 3"."\n";
-    foreach my $file (@list) {
-        print $FD "$file 1"."\n";
-    }
-    print $FD $src."/".$base{$arch}{loader}." 2"."\n" if $base{$arch}{loader};
+
+    print $FD "$src/$base{$arch}{efi} 1000001\n" if $base{$arch}{efi};
+    print $FD "$src/$base{$arch}{boot}/boot.catalog 3\n";
+    print $FD "$ldir/$base{$arch}{boot}/boot.catalog 3\n";
+    print $FD "$ldir/glump 1000000\n";
     close $FD;
-    $this->{sortfile} = $sort;
-    return $sort;
+
+    return " -sort $sort";
 }
 
 #==========================================
@@ -851,6 +855,10 @@ sub createISOLinuxConfig {
     my $boot = shift;
     my $kiwi = $this -> {kiwi};
     my $src  = $this -> {source};
+
+    # standard location, isolinux-config not needed
+    return $this if -f "$src/isolinux/isolinux.bin";
+
     my $isox = "/usr/bin/isolinux-config";
     if (! -x $isox) {
         $kiwi -> error  ("Can't find isolinux-config binary");
@@ -858,7 +866,6 @@ sub createISOLinuxConfig {
         $this -> cleanISO();
         return;
     }
-    return $this unless -f "$src/$boot/loader/isolinux.bin";
     my $data = KIWIQX::qxx (
         "$isox --base $boot/loader $src/$boot/loader/isolinux.bin 2>&1"
     );
@@ -972,11 +979,11 @@ sub createISO {
     my $cmdL     = $this -> {cmdL};
     my $xml      = $this -> {xml};
     my $magicID  = $this -> {magicID};
+    my $hybrid   = $this -> {hybrid};
     my $firmware = 'efi';
     my $ldir_cnt = 0;
     my %type;
     my $cmdln;
-    my $hybrid;
     #==========================================
     # Lookup firmware setup
     #------------------------------------------
@@ -986,7 +993,6 @@ sub createISO {
         if ($xmlFirmWare) {
             $firmware = $xmlFirmWare;
         }
-        $hybrid = $type -> getHybrid();
     }
     #==========================================
     # check for pre bootloader install
@@ -1017,6 +1023,10 @@ sub createISO {
     #==========================================
     # Call mkisofs first stage
     #------------------------------------------
+    # log sort file
+    $kiwi -> info ("[I] Sort file $this->{tmpfile}:");
+    $kiwi -> info ("  $_") for (`cat $this->{tmpfile}`);
+
     if ($this -> isEmptyDir ($ldir)) {
         $cmdln = "$prog $para -o $dest $src 2>&1";
     } else {
@@ -1185,6 +1195,24 @@ sub checkImage {
     }
     return $this;
 }
+
+#==========================================
+# prepare_for_hybrid
+#------------------------------------------
+sub prepare_for_hybrid {
+    # Create file with magic id and return additional mkisofs options needed
+    # for hybrid mode.
+    my $this    = shift;
+    my $magicID = $this -> {magicID};
+
+    if ($this->{hybrid}) {
+        KIWIQX::qxx ("echo $magicID > $this->{tmpdir}/glump");
+        return " -hide glump -hide-joliet glump";
+    }
+
+    return "";
+}
+
 
 #==========================================
 # createHybrid
