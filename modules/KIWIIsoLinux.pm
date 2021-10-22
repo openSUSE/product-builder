@@ -276,7 +276,7 @@ sub new {
     $this -> {hybrid}      = $hybrid;
     $this -> {xml}         = $xml;
     $this -> {magicID}     = '7984fc91-a43f-4e45-bf27-6d3aa08b24cf';
-    $this -> {media_type}  = -f "$source/media.repo" ? 'rh' : 'suse';
+    $this -> {media_type}  = -f "$source/.discinfo" ? 'rh' : 'suse';
     return $this;
 }
 
