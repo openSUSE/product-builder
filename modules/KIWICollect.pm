@@ -765,16 +765,19 @@ sub mainTask {
         my $volid_maxlen = 32;
         my $vname = $name;
         $vname =~ s/-Media//;
-        $vname =~ s/-Build// if length($vname) > ($volid_maxlen - 4);
+        $vname =~ s/-Build\d\S+// if length($vname) > ($volid_maxlen - 4);
         if (defined($this->{m_proddata}->getVar("VOLUME_ID"))) {
             $vname = $this->{m_proddata}->getVar("VOLUME_ID");
         }
         my $vid = substr($vname,0,($volid_maxlen));
         if ($this->{m_proddata}->getVar("MULTIPLE_MEDIA", "true") eq "true") {
-            $vid = sprintf(
-                "%s.%03d",
-                substr($vname,0,($volid_maxlen - 4)), $cd
-            );
+            # we do not extend the volume id on the first medium if manualy specified
+            if (!defined($this->{m_proddata}->getVar("VOLUME_ID")) || $cd > 1) {
+               $vid = sprintf(
+                   "%s.%03d",
+                   substr($vname,0,($volid_maxlen - 4)), $cd
+               );
+            }
         }
         my $attr = "-r"; # RockRidge
         $attr .= " -pad"; # pad image by 150 sectors - needed for Linux
