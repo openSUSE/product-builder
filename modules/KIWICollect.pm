@@ -766,6 +766,9 @@ sub mainTask {
         my $vname = $name;
         $vname =~ s/-Media//;
         $vname =~ s/-Build// if length($vname) > ($volid_maxlen - 4);
+        if (defined($this->{m_proddata}->getVar("VOLUME_ID"))) {
+            $vname = $this->{m_proddata}->getVar("VOLUME_ID");
+        }
         my $vid = substr($vname,0,($volid_maxlen));
         if ($this->{m_proddata}->getVar("MULTIPLE_MEDIA", "true") eq "true") {
             $vid = sprintf(
