@@ -1653,6 +1653,7 @@ sub unpackMetapackages {
                                 qx(cp -a $tmp/usr/lib/skelcd/NET/* $this->{m_basesubdir}->{$_});
                                 # .treeinfo for virt-installer:
                                 qx(cp -a $tmp/usr/lib/skelcd/NET/.treeinfo $this->{m_basesubdir}->{$_}) if (-f "$tmp/usr/lib/skelcd/NET/.treeinfo");
+                                qx(cp -a $tmp/usr/lib/skelcd/NET/.discinfo $this->{m_basesubdir}->{$_}) if (-f "$tmp/usr/lib/skelcd/NET/.discinfo");
                                 $this->logMsg('I', "Unpack NET");
                                 $packageFound = 1;
                             } else {
