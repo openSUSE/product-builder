@@ -160,7 +160,7 @@ sub loadPlugin {
     my $this   = shift;
     my $retval = 0;
     my $file   = shift;
-    if ($file =~ m{^.*/[a-zA-Z_-]+$}) {
+    if ($file =~ m{^.*/[a-zA-Z0-9_-]+$}) {
         $file .= ".pm";
     }
     if (not(defined($file) and -f $file)) {
