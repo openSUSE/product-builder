@@ -1062,12 +1062,14 @@ sub setupPackageFiles {
 
                 # process package
                 my $medium = $packOptions->{'medium'} || 1;
-                $packOptions->{$requestedArch}->{'newfile'} =
+                my $name_base =
                     "$packName-"
                     .$packPointer->{'version'}
                     .'-'
                     .$packPointer->{'release'}
-                    .".$packPointer->{'arch'}.rpm";
+                    .".$packPointer->{'arch'}";
+                $packOptions->{$requestedArch}->{'newfile'} = $name_base . ".rpm";
+                $packOptions->{$requestedArch}->{'slsa_file'} = $name_base . ".slsa_provenance.json";
                 $packOptions->{$requestedArch}->{'newpath'} =
                     "$this->{m_basesubdir}->{$medium}"
                     ."/$packPointer->{'arch'}";
@@ -1081,22 +1083,20 @@ sub setupPackageFiles {
                 }
                 # link it:
                 my $item = $packOptions->{$requestedArch}->{'newpath'}."/$packOptions->{$requestedArch}->{'newfile'}";
-                if ((! -e  $item) && (! link (
-                    $packPointer->{'localfile'},
-                    "$packOptions->{$requestedArch}->{'newpath'}"
-                    ."/$packOptions->{$requestedArch}->{'newfile'}"))) {
-                    my $msg = "  linking file $packPointer->{'localfile'} "
-                        . "to $packOptions->{$requestedArch}->{'newpath'}/"
-                        . "$packOptions->{$requestedArch}->{'newfile'} "
-                        . 'failed';
+                my $item_slsa = $packOptions->{$requestedArch}->{'newpath'}."/$packOptions->{$requestedArch}->{'slsa_file'}";
+                if ((! -e  $item) && (! link($packPointer->{'localfile'}, $item))) {
+                    my $msg = "  linking file $packPointer->{'localfile'} to $item failed";
                     $this->logMsg('E', $msg);
                 } else {
-                    my $lnkTarget =
-                        $packOptions->{$requestedArch}->{'newpath'}
-                        . "/$packOptions->{$requestedArch}->{'newfile'}";
                     $this->addToTrackFile(
-                        $packName, $packPointer, $medium, $lnkTarget
+                        $packName, $packPointer, $medium, $item
                     );
+                    if ($packPointer->{'slsa_uri'}) {
+                        if (! link($packPointer->{'slsa_uri'}, $item_slsa)) {
+                            my $msg = "  linking file $packPointer->{'slsa_uri'} to $item_slsa failed";
+                            $this->logMsg('E', $msg);
+                        }
+                    }
                     if ($this->{m_debug} >= 4) {
                         my $lnkTarget = $packOptions->{$requestedArch}->{'newpath'};
                         my $msg = "	 linked file $packPointer->{'localfile'}"
@@ -1788,6 +1788,8 @@ sub lookUpAllPackages {
                 $count_files++;
                 # skip all files without rpm suffix
                 next URI unless( $uri =~ /\.rpm$/);
+                my $slsa_uri = $uri;
+                $slsa_uri =~ s/\.rpm$/.slsa_provenance.json/;
                 if ($this->{m_debug} >= 1) {
                     # show progress every 30 seconds
                     if ($last_progress_time < time()) {
@@ -1848,6 +1850,7 @@ sub lookUpAllPackages {
                     $package->{'arch'} = $arch;
                     $package->{'repo'} = $this->{m_repos}->{$r};
                     $package->{'localfile'} = $uri;
+                    $package->{'slsa_uri'} = $slsa_uri if -e $slsa_uri;
                     $package->{'disturl'} = $flags{'DISTURL'}[0];
                     $package->{'license'} = $flags{'LICENSE'}[0];
                     $package->{'epoch'} = $flags{'EPOCH'}[0];
