@@ -1136,7 +1136,7 @@ sub setupPackageFiles {
                     );
                     if ($packPointer->{'slsa_uri'} && ! -e $item_slsa) {
                         if (! link($packPointer->{'slsa_uri'}, $item_slsa)) {
-                            my $msg = "  linking file $packPointer->{'slsa_uri'} to $item_slsa failed: $@";
+                            my $msg = "  linking file $packPointer->{'slsa_uri'} to $item_slsa failed: $!";
                             $this->logMsg('E', $msg);
                         }
                     }
