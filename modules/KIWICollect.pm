@@ -1011,7 +1011,7 @@ sub setupPackageFiles {
             my $fb_available = 0;
             my @sorted_keys;
             if ($use_newest_package) {
-               @sorted_keys = sort {verscmp($poolPackages->{$a}, $poolPackages->{$b})
+               @sorted_keys = sort {verscmp($poolPackages->{$b}, $poolPackages->{$a})
                                     || indexOfArray($poolPackages->{$a}->{arch}, \@fallbacklist)
                                     <=> indexOfArray($poolPackages->{$b}->{arch}, \@fallbacklist)} keys(%{$poolPackages});
 	    } else {
@@ -1801,11 +1801,11 @@ sub verscmp_part {
 }
 
 sub verscmp {
-  my ($candidate, $current) = @_;
+  my ($p1, $p2) = @_;
 
-  return verscmp_part($current->{'epoch'}||0, $candidate->{'epoch'}||0) ||
-         verscmp_part($current->{'version'}, $candidate->{'version'}) ||
-	 verscmp_part($current->{'release'}, $candidate->{'release'});
+  return verscmp_part($p1->{'epoch'}||0, $p2->{'epoch'}||0) ||
+         verscmp_part($p1->{'version'}, $p2->{'version'}) ||
+	 verscmp_part($p1->{'release'}, $p2->{'release'});
 }
 
 #==========================================
