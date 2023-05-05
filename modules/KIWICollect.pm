@@ -1184,9 +1184,7 @@ sub setupPackageFiles {
         }
         my $opt = 'IGNORE_MISSING_REPO_PACKAGES';
         my $val = $this->{m_proddata}->getOpt($opt);
-        unless ($val eq "true") {
-            $this->logMsg('E', "Required packages were not found");
-        }
+        $this->logMsg('E', "Required packages were not found") unless $val && $val eq "true";
     }
     return $retval;
 }
