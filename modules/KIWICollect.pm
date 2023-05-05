@@ -782,8 +782,12 @@ sub mainTask {
         my $attr = "-r"; # RockRidge
         $attr .= " -pad"; # pad image by 150 sectors - needed for Linux
         $attr .= " -f"; # follow symlinks - really necessary?
-        $attr .= " -J"; # Joilet extensions - only useful for i586/x86_64,
-        $attr .= " -joliet-long"; # longer filenames for joilet filenames
+        if ($cd == 1) {
+          # Joliet only for main medium.
+	  # The .slsa_provenance files may trigger file name limits on iso generation
+          $attr .= " -J"; # Joilet extensions - only useful for i586/x86_64,
+          $attr .= " -joliet-long"; # longer filenames for joilet filenames
+        }
         $attr .= " -p \"$this->{gdata}->{Preparer}\"";
         $attr .= " -publisher \"$this->{gdata}->{Publisher}\"";
         $attr .= " -A \"$name\"";
