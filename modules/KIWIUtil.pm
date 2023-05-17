@@ -19,9 +19,14 @@ package KIWIUtil;
 #------------------------------------------
 use strict;
 use warnings;
+use Digest::SHA;
+use File::Basename;
+use File::Copy;
 use File::Glob ':glob';
 use File::Find;
 use File::Path;
+use POSIX qw(strftime);
+use Time::HiRes qw(stat utime);
 
 #==========================================
 # KIWI Modules
@@ -475,9 +480,14 @@ sub unify {
 #------------------------------------------
 sub unpac_package {
     # ...
-    # implementation of the pac_unpack script
-    # of the SuSE autobuild team
-    # original: /mounts/work/src/bin/tools/pac_unpack
+    # To ensure rsync works even without --checksum this creates all file names
+    # in the archive as symlinks to files with the real content named after the
+    # content hash. This is needed as newer builds will result in files with
+    # the same mtime but changed content compared to previous builds due to how
+    # SOURCE_DATE_EPOCH for reproducible builds works.
+    #
+    # Based on a script from the SuSE autobuild team:
+    # /mounts/work/src/bin/tools/pac_unpack
     #--------------------------------------
     # params
     #   $this - class name; always call as member
@@ -500,26 +510,98 @@ sub unpac_package {
             goto up_failed;
         }
     }
+
+    my $tmpdir = KIWIQX::qxx ("mktemp -qdt kiwiunpac.XXXXXX"); chomp $tmpdir;
+
     if($p_uri =~ m{(.*\.tgz|.*\.tar\.gz|.*\.taz|.*\.tar\.Z)}) {
-        my $out = qx(cd $dir && tar -zxvfp $p_uri);
+        my $out = qx(cd $tmpdir && tar -zxvfp $p_uri);
         my $status = $?>>8;
         if($status != 0) {
-            my $msg = "[E] command cp $dir && tar xvzfp $p_uri failed!\n";
+            my $msg = "[E] command cd $tmpdir && tar xvzfp $p_uri failed!\n";
             $this->{m_collect}->logMsg("E", $msg);
             $this->{m_collect}->logMsg("E", "\t$out\n");
             $retval = 5;
             goto up_failed;
-        } else {
-            my $msg = "[I] unpacked $p_uri in directory $dir\n";
-            $this->{m_collect}->logMsg("I", $msg);
         }
     } elsif($p_uri =~ m{.*\.rpm}i) {
-        my $out = qx(cd $dir && unrpm -q $p_uri);
+        my $out = qx(cd $tmpdir && unrpm -q $p_uri);
+        if($? != 0) {
+            $this->{m_collect}->logMsg("E", "[E] command cd $tmpdir && unrpm -q $p_uri failed, output follows!\n");
+            $this->{m_collect}->logMsg("E", "\t$out\n");
+            $retval = 5;
+            goto up_failed;
+        }
     } else {
         $this->{m_collect}->logMsg("E", "[E] cannot process file $p_uri\n");
         $retval = 4;
         goto up_failed;
     }
+
+    # Symlink the filename to a file with its content named after its content hash.
+    # for backwards compatiblity only remove the 1 check when obs supports setting SOURCE_DATE_EPOCH
+    if(1 && !$ENV{SOURCE_DATE_EPOCH}) {
+        $this->{m_collect}->logMsg("W", "[W] Failed to read environment variable SOURCE_DATE_EPOCH, setting to 0.");
+        $ENV{SOURCE_DATE_EPOCH} = "0";
+    }
+    my $date = strftime("%Y%m%d%H%M.%S", gmtime($ENV{SOURCE_DATE_EPOCH}));
+    my @links;
+    find({ wanted => sub {
+        my $postfix = substr($_, length($tmpdir));
+        if (length($postfix) == 0) {
+            return;
+        }
+        if (-d $_) {
+            if(!mkdir("$dir/$postfix")) {
+                $this->{m_collect}->logMsg("E", "[E] failure from mkdir($dir/$postfix): $!\n");
+                $retval = 2;
+                goto up_failed;
+            }
+            # index 9 is mtime
+            my $time = (stat($_))[9];
+            # restore mtime from the archive which is supposed to be reproducible
+            if(1 != utime($time, $time, "$dir/$postfix")) {
+                $this->{m_collect}->logMsg("E", "[E] failure from utime($time, $time, $dir/$postfix): $!\n");
+                $retval = 2;
+                goto up_failed;
+            }
+        } else {
+            my $hashdir = dirname("$dir/$postfix")."/.hashed";
+            if (!-d $hashdir) {
+               if(!mkdir($hashdir)) {
+                   $this->{m_collect}->logMsg("E", "[E] failure from mkdir($hashdir): $!\n");
+                   $retval = 2;
+                   goto up_failed;
+               }
+            }
+
+            my $hash = Digest::SHA->new(512224)->addfile($_)->hexdigest();
+            if(!move($_, "$hashdir/$hash")) {
+                $this->{m_collect}->logMsg("E", "[E] failure from move($_, $hashdir/$hash): $!\n");
+                $retval = 2;
+                goto up_failed;
+            }
+            if(!symlink(".hashed/$hash", "$dir/$postfix")) {
+                $this->{m_collect}->logMsg("E", "[E] failure from symlink(.hashed/$hash, $dir/$postfix)\n");
+                $retval = 2;
+                goto up_failed;
+            }
+            push(@links, "$dir/$postfix");
+        }
+    } , no_chdir => 1 }, $tmpdir);
+    if (@links) {
+        # there is no way in perl to set the mtime of a symlink and to call the libc function lutimes FFI::Platypus would be useful, but is not packaged yet, so for speed batch a call to touch
+        unshift(@links, ("/usr/bin/touch", "-h", "-t", $date));
+        system(@links);
+        if (0 != $?) {
+            $this->{m_collect}->logMsg("E", "[E] error return value $? from calling ".join(" ", @links)."\n");
+            $retval = 2;
+        }
+    }
+
+    File::Path::remove_tree($tmpdir);
+    my $msg = "[I] unpacked $p_uri in directory $dir\n";
+    $this->{m_collect}->logMsg("I", $msg);
+
     up_failed:
     return $retval;
 }

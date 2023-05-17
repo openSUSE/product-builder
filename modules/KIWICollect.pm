@@ -1638,6 +1638,7 @@ sub unpackMetapackages {
                             # .treeinfo for virt-installer:
                             qx(cp -a $tmp/usr/lib/skelcd/CD$_/.treeinfo $this->{m_basesubdir}->{$_}) if (-f "$tmp/usr/lib/skelcd/CD$_/.treeinfo");
                             qx(cp -a $tmp/usr/lib/skelcd/CD$_/.discinfo $this->{m_basesubdir}->{$_}) if (-f "$tmp/usr/lib/skelcd/CD$_/.discinfo");
+                            qx(cp -a $tmp/usr/lib/skelcd/CD$_/.hashed $this->{m_basesubdir}->{$_}) if (-d "$tmp/usr/lib/skelcd/CD$_/.hashed");
                             $this->logMsg('I', "Unpack CD$_");
                             $packageFound = 1;
                         } elsif (-d "$tmp/CD$_"
@@ -1654,6 +1655,7 @@ sub unpackMetapackages {
                                 # .treeinfo for virt-installer:
                                 qx(cp -a $tmp/usr/lib/skelcd/NET/.treeinfo $this->{m_basesubdir}->{$_}) if (-f "$tmp/usr/lib/skelcd/NET/.treeinfo");
                                 qx(cp -a $tmp/usr/lib/skelcd/NET/.discinfo $this->{m_basesubdir}->{$_}) if (-f "$tmp/usr/lib/skelcd/NET/.discinfo");
+                                qx(cp -a $tmp/usr/lib/skelcd/NET/.hashed $this->{m_basesubdir}->{$_}) if (-f "$tmp/usr/lib/skelcd/NET/.hashed");
                                 $this->logMsg('I', "Unpack NET");
                                 $packageFound = 1;
                             } else {
