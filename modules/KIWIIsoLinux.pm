@@ -22,8 +22,11 @@ use strict;
 use warnings;
 use Carp qw /cluck/;
 use Fcntl;
+use File::Copy;
 use File::Find;
 use File::Basename;
+use POSIX qw(strftime);
+use Time::HiRes qw(lstat utime);
 
 #==========================================
 # Base class
@@ -105,8 +108,13 @@ sub new {
         $tool = $genTool;
         $tool_type = "genisoimage";
     } else {
-        my $mkTool = $locator -> getExecPath('mkisofs');
+        my $mkTool = $locator -> getExecPath('xorrisofs');
         if ($mkTool && -x $mkTool) {
+            $tool = $mkTool;
+            # xorrisofs is a drop in replacement
+            $tool_type = "mkisofs";
+        } elsif ($mkTool && -x $mkTool) {
+            $mkTool = $locator -> getExecPath('mkisofs');
             $tool = $mkTool;
             $tool_type = "mkisofs";
         } else {
@@ -614,6 +622,7 @@ sub createSortFile {
     my $src  = $this->{source};
     my $sort = $this->{tmpfile};
     my $ldir = $this->{tmpdir};
+    my $tool = $this->{tool};
     my $FD;
 
     return "" if ! -d $src."/".$base{$arch}{boot};
@@ -625,19 +634,38 @@ sub createSortFile {
         return "";
     }
 
-    if ($base{$arch}{loader}) {
-      print $FD "$src/$base{$arch}{loader} 2\n";
-      (my $loader_dir = $base{$arch}{loader}) =~ s#/[^/]+$##;
-      print $FD "$src/$loader_dir 1\n";
-    }
+    my $arg = "-sort";
+    if (rindex($tool, "xorrisofs") == -1) {
+        if ($base{$arch}{loader}) {
+            print $FD "$src/$base{$arch}{loader} 2\n";
+            (my $loader_dir = $base{$arch}{loader}) =~ s#/[^/]+$##;
+            print $FD "$src/$loader_dir 1\n";
+        }
 
-    print $FD "$src/$base{$arch}{efi} 1000001\n" if $base{$arch}{efi};
-    print $FD "$src/$base{$arch}{boot}/boot.catalog 3\n";
-    print $FD "$ldir/$base{$arch}{boot}/boot.catalog 3\n";
-    print $FD "$ldir/glump 1000000\n";
+        print $FD "$src/$base{$arch}{efi} 1000001\n" if $base{$arch}{efi};
+        print $FD "$src/$base{$arch}{boot}/boot.catalog 3\n";
+        print $FD "$ldir/$base{$arch}{boot}/boot.catalog 3\n";
+        print $FD "$ldir/glump 1000000\n";
+    } else {
+	# while xorrisofs is generally compatible with mkisofs, this is an exception
+        $arg = "--sort-weight-list";
+        if ($base{$arch}{loader}) {
+            print $FD "2 $base{$arch}{loader}\n";
+            (my $loader_dir = $base{$arch}{loader}) =~ s#/[^/]+$##;
+            print $FD "1 $loader_dir\n";
+        }
+
+        print $FD "1000001 $base{$arch}{efi}\n" if $base{$arch}{efi};
+        if (-f "$src/$base{$arch}{boot}/boot.catalog" || -f "$ldir/$base{$arch}{boot}/boot.catalog") {
+            print $FD "3 $base{$arch}{boot}/boot.catalog\n";
+        }
+        if (-f "$ldir/glump") {
+            print $FD "1000000 glump\n";
+        }
+    }
     close $FD;
 
-    return " -sort $sort";
+    return " $arg $sort";
 }
 
 #==========================================
@@ -1021,6 +1049,89 @@ sub createISO {
         }
     }
     #==========================================
+    # Ensure xorrisofs which stands in for mkisofs produces reproducible output
+    #------------------------------------------
+    # for backwards compatiblity only remove the 1 check when obs supports setting SOURCE_DATE_EPOCH
+    if(1 && !$ENV{SOURCE_DATE_EPOCH}) {
+        $ENV{SOURCE_DATE_EPOCH} = "0";
+        $kiwi->info("[I] Environment variable SOURCE_DATE_EPOCH not set, setting to $ENV{SOURCE_DATE_EPOCH}.");
+    }
+    if (rindex($prog, "xorrisofs") != -1) {
+        my $date = strftime("%Y%m%d%H%M%S00", gmtime($ENV{SOURCE_DATE_EPOCH}));
+        $para = "$para --set_all_file_dates $date";
+    } elsif (rindex($prog, "mkisofs") != -1) {
+        my $date = strftime("%Y%m%d%H%M%S", gmtime($ENV{SOURCE_DATE_EPOCH}));
+        $para = "$para -noatime -reproducible-date=$date";
+    } else {
+        $kiwi->warning("[W] proceeding despite reproducible iso images not implemented for $prog");
+    }
+    #==========================================
+    # temporarily convert symlinks to hardlinks to later restore them as iso does not support symlinks for boot related data even with Rock
+    # and move .hashed directories aside to move them back later as xorrisofs its exclude support leads to non-reproducible images
+    # (just including the .hashed directories would lead to error "Unexpected iso layout" later in this script)
+    #------------------------------------------
+    my @linkdata;
+    my $linkdate;
+    find({ wanted => sub {
+        if (-l $_) {
+            if (!$linkdate) {
+                # index 9 is mtime
+                $linkdate = (lstat($_))[9];
+                $linkdate = strftime("%Y%m%d%H%M.%S", gmtime($linkdate));
+            }
+            my $target = readlink($_);
+            if (!defined($target)) {
+                $kiwi -> error  ("Failed to readlink($_) with error: $!\n");
+                $kiwi -> failed ();
+                return;
+            }
+            my @data = ($target, $_);
+            push(@linkdata, \@data);
+            $kiwi -> info ("converting symlink to hardlink at $_ with target $target\n");
+            if (!unlink($_)) {
+                $kiwi -> error  ("Failed to unlink($_) with error: $!\n");
+                $kiwi -> failed ();
+                return;
+            }
+            my $dir = dirname($_);
+            if (!link($dir.'/'.$target, $_)) {
+                $kiwi -> error  ("Failed to link($dir.'/'.$target, $_) with error: $!\n");
+                $kiwi -> failed ();
+                return;
+            }
+            # index 9 is mtime
+            my $time = (stat($dir.'/'.$target))[9];
+            # restore mtime of the new link
+            if(1 != utime($time, $time, $_)) {
+                $kiwi -> error  ("Failed to utime($time, $time, $_) with error: $!\n");
+                $kiwi -> failed ();
+                return;
+            }
+        }
+    } , no_chdir => 1 }, ($ldir, $src));
+    # directories named .hashed contain symlink targets, this construct is used to avoid rsync skipping changed content whose mtime did not change
+    if (!mkdir("$src/../tmp-moved-hidden-excluded")) {
+        $kiwi -> error  ("Failed to mkdir($src/../tmp-moved-hidden-excluded) with error: $!\n");
+        $kiwi -> failed ();
+        return;
+    }
+    my %moveddata;
+    my $count = 1;
+    find({ wanted => sub {
+        if (".hashed" eq basename($_)) {
+            $moveddata{$count} = $_;
+            $count++;
+        }
+    } , no_chdir => 1 }, ($ldir, $src));
+    while(my ($count, $name) = each %moveddata) {
+        if (!move($name, "$src/../tmp-moved-hidden-excluded/$count")) {
+            $kiwi -> error  ("Failed to move($name, $src/../tmp-moved-hidden-excluded/$count) with error: $!\n");
+            $kiwi -> failed ();
+            return;
+        }
+        $kiwi -> info ("moving $name temporarily aside to hide from input for builing iso image\n");
+    }
+    #==========================================
     # Call mkisofs first stage
     #------------------------------------------
     # log sort file
@@ -1040,6 +1151,7 @@ sub createISO {
         $this -> cleanISO();
         return;
     }
+    $kiwi ->info("[I] Output of $prog: $data");
     #==========================================
     # Call mkisofs second stage
     #------------------------------------------
@@ -1063,6 +1175,49 @@ sub createISO {
             $this -> cleanISO();
             return;
         }
+        $kiwi ->info("[I] Output of $prog: $data");
+    }
+    #==========================================
+    # restore symlinks and .hashed directories
+    #------------------------------------------
+    while(my ($count, $name) = each %moveddata) {
+        if (!move("$src/../tmp-moved-hidden-excluded/$count", $name)) {
+            $kiwi -> error  ("Failed to move($src/../tmp-moved-hidden-excluded/$count, $name) with error: $!\n");
+            $kiwi -> failed ();
+            return;
+        }
+    }
+    if (!rmdir("$src/../tmp-moved-hidden-excluded")) {
+        $kiwi -> error  ("Failed to rmdir($src/../tmp-moved-hidden-excluded) with error: $!\n");
+        $kiwi -> failed ();
+        return;
+    }
+    my @links;
+    foreach (@linkdata) {
+        my $target = ${$_}[0];
+        my $name = ${$_}[1];
+        push(@links, $name);
+        if (!unlink($name)) {
+            $kiwi -> error  ("Failed to unlink($name) with error: $!\n");
+            $kiwi -> failed ();
+            return;
+        }
+        if (!symlink($target, $name)) {
+            $kiwi -> error  ("Failed to symlink($target, $name) with error: $!\n");
+            $kiwi -> failed ();
+            return;
+        }
+    }
+    if (@links) {
+        # there is no way in perl to set the mtime of a symlink and to call the libc function lutimes FFI::Platypus would be useful, but is not packaged yet, so for speed batch a call to touch
+        unshift(@links, ("/usr/bin/touch", "-h", "-t", $linkdate));
+        system(@links);
+        if (0 != $?) {
+            $kiwi -> error  ("error return value $? from calling ".join(" ", @links)."\n");
+            $kiwi -> failed ();
+            return;
+        }
+        $kiwi -> info ("restored symlinks\n");
     }
     #==========================================
     # Call post bootloader install
@@ -1110,31 +1265,46 @@ sub isols {
     my $iso  = $this -> {dest};
     my $fd   = FileHandle -> new();
     my $dir  = "/";
-    my $isoinfo_opts = " -R -l -i $iso 2>/dev/null |";
+    my $opts = " -indev $iso -find / -not -type d -exec report_lba 2>/dev/null |";
     my $files;
     local $_;
-    my $isoinfo_cmd = "/usr/bin/isoinfo";
-    if (! -x $isoinfo_cmd){
-        $isoinfo_cmd = "/usr/lib/genisoimage/isoinfo";
-        if (! -x $isoinfo_cmd){
-            return;
+    my $cmd = "/usr/bin/xorriso";
+    if (! -x $cmd){
+        $cmd = "/usr/bin/isoinfo";
+        $opts = " -R -l -i $iso 2>/dev/null |";
+        if (! -x $cmd){
+            $cmd = "/usr/lib/genisoimage/isoinfo";
+            if (! -x $cmd){
+                return;
+            }
         }
     }
-    if (! $fd -> open ($isoinfo_cmd . $isoinfo_opts)) {
+    if (! $fd -> open ($cmd . $opts)) {
         return;
     }
     while(<$fd>) {
-        if(/^Directory listing of\s*(\/.*\/)/) {
-            $dir = $1;
-            next;
-        }
-        if(/.*(-)[-rxw]{9}.*\s\[\s*(\d+)(\s+\d+)?\]\s+(.*?)\s*$/) {
-            my $type = $1;
-            $type = ' ' if $type eq '-';
-            if($4 ne '.' && $4 ne '..') {
+        if($cmd eq "/usr/bin/xorriso") {
+            if(/Report layout:\s+xt\s,\s+Startlba\s,\s+Blocks\s,\s+Filesize\s,\s+ISO image path$/) {
+                next;
+            }
+            if(/File data lba:\s+(\d+)\s,\s+(\d+)\s,\s+(\d+)\s,\s+(\d+)\s,\s+'(\/.*)'$/) {
                 push @$files, {
-                    name => "$dir$4",type => $type,start => $2 + 0
+                    name => $5, type => ' ', start => $2
                 };
+            }
+        } else {
+            if(/^Directory listing of\s*(\/.*\/)/) {
+                $dir = $1;
+                next;
+            }
+            if(/.*(-)[-rxw]{9}.*\s\[\s*(\d+)(\s+\d+)?\]\s+(.*?)\s*$/) {
+                my $type = $1;
+                $type = ' ' if $type eq '-';
+                if($4 ne '.' && $4 ne '..') {
+                    push @$files, {
+                        name => "$dir$4",type => $type,start => $2 + 0
+                    };
+                }
             }
         }
     }
