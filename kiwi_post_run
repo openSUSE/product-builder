@@ -1,0 +1,54 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use File::Compare;
+use File::Find;
+use Time::HiRes qw(stat);
+use Time::HiRes qw(utime);
+
+sub main {
+    #if(!$ENV{BUILD_ROOT}) {
+    #    info("[I] \$BUILD_ROOT is not set\n");
+    #     exit(2);
+    #}
+    #TODO debug remove
+    print("\n\n\n");
+    find({ wanted => sub { print($_); print("\n"); } , no_chdir => 1 }, "/usr/src/packages");
+    find({ wanted => sub { print($_); print("\n"); } , no_chdir => 1 }, "/usr/lib/build");
+    print("\n\n\n");
+    #TODO
+    my $olddir = "/usr/src/packages/.build.oldpackages/KIWIROOT";
+    if(-d($olddir)) {
+        info("[I] checking for old results in $olddir if we can for each file of the build result that has the same content as the previous build use the old mtime to save rsync disk io\n");
+    } else {
+        info("[I] old packages dir does not exist, doing nothing: $olddir\n");
+        exit(0);
+    }
+    #TODO
+    my $newdir = "/usr/src/packages/KIWIROOT";
+
+    print("\n\n\n");
+    my $n = 0;
+    find({ wanted => sub {
+        my $old = $olddir . substr($_, length($newdir));
+        #TODO debug remove
+        print($_);
+        print("\n");
+        if (!-d($_) && compare($old, $_)) {
+            # index 9 is mtime
+            my $time = (stat($old))[9];
+            # this is the equivalent of the touch command
+            utime($time, $time, $_);
+            $n++;
+        }
+    } , no_chdir => 1 }, $newdir);
+    print("\n\n\n");
+    info("[I] used old mtime for $n files\n");
+}
+
+sub info {
+    print(shift)
+}
+
+main();
+

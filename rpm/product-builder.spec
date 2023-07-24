@@ -84,6 +84,9 @@ mv %{buildroot}%{_bindir}/product-builder{.pl,}
 ln -s product-builder-sle.sh %{buildroot}%{_bindir}/product-builder
 %endif
 
+mkdir -p %{buildroot}%{_prefix}/lib/build/
+install -m 755 kiwi_post_run %{buildroot}%{_prefix}/lib/build/
+
 %files
 %dir %{_datadir}/kiwi
 %license LICENSE
@@ -92,5 +95,6 @@ ln -s product-builder-sle.sh %{buildroot}%{_bindir}/product-builder
 %{_datadir}/kiwi/modules
 %{_datadir}/kiwi/xsl
 %{_bindir}/product-builder*
+%{_prefix}/lib/build/kiwi_post_run
 
 %changelog
