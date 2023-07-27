@@ -1825,6 +1825,7 @@ sub lookUpAllPackages {
     my $num_repos = keys %{$this->{m_repos}};
     my $count_repos = 0;
     my $last_progress_time = 0;
+    my $download_mirror_policy = $this->{m_proddata}->getOpt('DOWNLOAD_MIRROR_POLICY');
     REPO:
     for my $r (
         sort {
@@ -1945,8 +1946,14 @@ sub lookUpAllPackages {
                     }
                     if ( $packPool->{$name}->{$repokey} ) {
                         # we have it already in same repo
-                        # is this one newer?
-			next if verscmp($packPool->{$name}->{$repokey}, $package) > 0;
+                        # is this one older?
+                        if (verscmp($packPool->{$name}->{$repokey}, $package) > 0) {
+                           if ($download_mirror_policy ne "false") {
+                              # Abort to avoid changing files with same location.
+                              $this->logMsg('E', "Same package name in one repository with different versions: $name\nNot allowed by DOWNLOAD_MIRROR_POLICY\n");
+                           };
+                           next;
+                        }
                     }
                     # collect data for connected source rpm
                     if( $flags{'SOURCERPM'} ) {
