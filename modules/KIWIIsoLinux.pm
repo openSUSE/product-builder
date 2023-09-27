@@ -477,7 +477,6 @@ sub ppc64_default {
     $para.= " -map $this->{gdata}->{BasePath}";
     $para.= "/metadata/KIWIIsoLinux-AppleFileMapping.map";
     $para.= " --netatalk";
-    $para.= " -part";
     $para.= " -U";
     $this -> {params} = $para;
 
@@ -499,7 +498,6 @@ sub ppc64le_default {
     $para.= " -hfs-bless $src/$boot/grub2-ieee1275";
     $para.= " -hfs-volid '$volid'";
     $para.= " -l";
-    $para.= " -part";
     $para.= " -U";
     $this -> {params} = $para;
 
