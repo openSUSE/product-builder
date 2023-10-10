@@ -50,7 +50,7 @@ Requires:       obs-build
 %endif
 Requires:       checkmedia
 Requires:       inst-source-utils
-Requires:       mkisofs
+Requires:       xorriso
 Requires:       product-builder-plugin
 %ifarch %ix86 x86_64
 Requires:       syslinux
