@@ -806,6 +806,8 @@ sub mainTask {
                 my $msg = 'Creating boot methods failed, medium maybe '
                     . 'not be bootable';
                 $this->logMsg('W', $msg);
+            } elsif (-e "$this->{m_basesubdir}->{$cd}/ppc/bootinfo.txt") {
+                $this->logMsg('I', "PPC CHRP boot mode");
             } else {
                 $this->logMsg('I', "Boot methods called successfully");
                 $is_bootable = 1;
