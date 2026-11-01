@@ -49,6 +49,7 @@ use KIWIXML;
 # UTF-8 for output to stdout
 #--------------------------------------------
 binmode(STDOUT, ":encoding(UTF-8)");
+STDOUT->autoflush(1); # for more readable output
 
 #============================================
 # Globals
